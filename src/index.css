@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Number input UX: nhập trực tiếp, ẩn spinner tăng/giảm */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

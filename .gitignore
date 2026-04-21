@@ -1,0 +1,31 @@
+# === Dependencies ===
+node_modules/
+vendor/
+
+# === Build Output ===
+dist/
+build/
+coverage/
+
+# === Environment (sensitive) ===
+.env
+!.env.example
+
+# === Uploads (user-generated content) ===
+uploads/
+api/uploads/kyc/
+api/uploads/users/
+
+# === Composer ===
+composer.lock
+
+# === IDE & OS ===
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+*.pem
+
+# === Package locks (optional - chỉ cần lock 1 loại) ===
+# package-lock.json

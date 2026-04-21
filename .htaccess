@@ -1,0 +1,9 @@
+Options -MultiViews
+RewriteEngine On
+
+# Redirect root to the published React app path
+RewriteRule ^$ /smart-real-estate-management-system/dist/ [R=302,L]
+
+# Ensure SPA routes still load the single-page app
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^smart-real-estate-management-system/dist/.*$ /smart-real-estate-management-system/dist/index.html [L]
