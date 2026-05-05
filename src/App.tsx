@@ -550,7 +550,7 @@ export default function App() {
           <div className="space-y-12 pb-20">
             {/* Quick Setup Banner for Empty State */}
             {user && properties.length === 0 && (
-              <div className="max-w-7xl mx-auto px-4 mt-8">
+              <div className="max-w-[1440px] mx-auto px-4 mt-8">
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-8 opacity-10">
                     <Database className="w-32 h-32" />
@@ -574,7 +574,7 @@ export default function App() {
             )}
 
             {/* Hero Section */}
-            <section className="relative h-[500px] flex items-center justify-center overflow-hidden rounded-3xl mx-4 sm:mx-0">
+            <section className="relative h-[480px] flex items-center justify-center overflow-hidden rounded-[2.5rem] mx-4 sm:mx-0 shadow-xl">
               <div className="absolute inset-0 z-0">
                 <img 
                   src="https://picsum.photos/seed/realestate-hero/1920/1080" 
@@ -593,7 +593,7 @@ export default function App() {
                     <Sparkles className="w-4 h-4" />
                     Hệ thống BĐS thông minh tích hợp AI
                   </div>
-                  <h1 className="text-4xl sm:text-6xl font-bold text-white mb-6 tracking-tight">
+                  <h1 className="text-4xl sm:text-6xl font-extrabold text-white mb-6 tracking-tight">
                     Tìm kiếm ngôi nhà <br /> <span className="text-blue-400">trong mơ</span> của bạn
                   </h1>
                   <p className="text-lg text-gray-200 mb-10 max-w-2xl mx-auto leading-relaxed">
@@ -618,28 +618,11 @@ export default function App() {
                   <h2 className="text-3xl font-bold text-gray-900 mb-2">Bất động sản nổi bật</h2>
                   <p className="text-gray-500">Những lựa chọn tốt nhất dành riêng cho bạn</p>
                 </div>
-                <div className="flex gap-4">
-                  {!user ? (
-                    <Button onClick={() => setShowAuthModal(true)} className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl px-6">
-                      <LogIn className="w-4 h-4 mr-2" /> Đăng nhập
+                <div className="flex gap-4 items-center">
+                  {user && properties.length === 0 && (
+                    <Button onClick={seedData} variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 font-bold">
+                      Thêm dữ liệu mẫu
                     </Button>
-                  ) : (
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full border border-gray-200 bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
-                          {user.display_name?.charAt(0) || 'U'}
-                        </div>
-                        <span className="text-sm font-bold text-gray-700">{user.display_name}</span>
-                      </div>
-                      <Button onClick={handleLogout} variant="ghost" className="text-gray-500 hover:text-red-600 font-bold">
-                        <LogOut className="w-4 h-4 mr-2" /> Đăng xuất
-                      </Button>
-                      {properties.length === 0 && (
-                        <Button onClick={seedData} variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50 font-bold">
-                          Thêm dữ liệu mẫu
-                        </Button>
-                      )}
-                    </div>
                   )}
                   <Button variant="ghost" className="text-blue-600 font-bold flex items-center gap-2">
                     Xem tất cả <ArrowRight className="w-4 h-4" />
@@ -712,7 +695,7 @@ export default function App() {
 
             {/* AI Features Highlight */}
             <section className="bg-gray-900 py-20 rounded-[3rem] mx-4 sm:mx-0">
-              <div className="max-w-7xl mx-auto px-4">
+              <div className="max-w-[1440px] mx-auto px-4">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                   <div>
                     <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6 leading-tight">
@@ -752,9 +735,9 @@ export default function App() {
         );
       case 'market':
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Phân tích thị trường</h1>
+              <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">Phân tích thị trường</h1>
               <p className="text-gray-500">Dữ liệu thời gian thực giúp bạn đưa ra quyết định đầu tư đúng đắn</p>
             </div>
             <MarketDashboard />
@@ -762,7 +745,7 @@ export default function App() {
         );
       case 'post':
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <div className="mb-8 text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Đăng tin rao bán</h1>
               <p className="text-gray-500">Quy trình đăng tin chuyên nghiệp với sự hỗ trợ của AI</p>
@@ -772,46 +755,46 @@ export default function App() {
         );
       case 'pricing':
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <Pricing user={user} onShowAuth={() => setShowAuthModal(true)} />
           </div>
         );
       case 'profile':
         if (user?.role === 'agent') {
             return (
-              <div className="max-w-7xl mx-auto px-4 py-12">
+              <div className="max-w-[1440px] mx-auto px-4 py-12">
                 <AgentDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
               </div>
             );
         }
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <UserDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
           </div>
         );
       case 'agent-account':
         if (user?.role === 'agent') {
           return (
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-[1440px] mx-auto px-4 py-12">
               <AgentDashboard initialTab="settings" onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
             </div>
           );
         }
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <UserDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
           </div>
         );
       case 'notifications':
         if (user?.role === 'agent') {
           return (
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-[1440px] mx-auto px-4 py-12">
               <AgentDashboard initialTab="notifications" onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
             </div>
           );
         }
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <UserDashboard initialTab="notifications" onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
           </div>
         );
@@ -820,7 +803,7 @@ export default function App() {
         if (user?.role !== 'admin') {
           // Agent về AgentDashboard, user về UserDashboard
           return (
-            <div className="max-w-7xl mx-auto px-4 py-12">
+            <div className="max-w-[1440px] mx-auto px-4 py-12">
               {user?.role === 'agent'
                 ? <AgentDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
                 : <UserDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
@@ -829,7 +812,7 @@ export default function App() {
           );
         }
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <AdminDashboard onNavigate={setCurrentPage} />
           </div>
         );
@@ -842,7 +825,7 @@ export default function App() {
         return <AdminUserManagement />;
       case 'kyc':
         return (
-          <div className="max-w-7xl mx-auto px-4 py-12">
+          <div className="max-w-[1440px] mx-auto px-4 py-12">
             <KYCVerification onComplete={() => setCurrentPage('profile')} />
           </div>
         );
@@ -876,7 +859,7 @@ export default function App() {
         ) : null;
       case 'messages':
         return (
-          <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="max-w-[1440px] mx-auto px-4 py-6">
             <MessengerPage user={user} defaultReceiverId={chatDefaultReceiver} />
           </div>
         );
@@ -926,7 +909,7 @@ export default function App() {
       {renderAuthModal()}
 
       <footer className="bg-gray-50 border-t border-gray-100 py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 text-center">
+        <div className="max-w-[1440px] mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-6">
             <div className="bg-blue-600 p-1 rounded-lg">
               <Home className="w-5 h-5 text-white" />

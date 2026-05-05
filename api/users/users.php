@@ -27,7 +27,7 @@ function getUsers(): void {
     $user = requireAuth();
 
     $db = getDB();
-    $stmt = $db->prepare("SELECT id, email, display_name, photo_url, role, kyc_verified, created_at FROM users ORDER BY created_at DESC");
+    $stmt = $db->prepare("SELECT id, email, display_name, photo_url, role, kyc_verified, subscription_plan, subscription_expires_at, created_at FROM users ORDER BY created_at DESC");
     $stmt->execute();
     $users = $stmt->fetchAll();
 
@@ -41,7 +41,7 @@ function getUsers(): void {
 
 function getUser(int $id): void {
     $db = getDB();
-    $stmt = $db->prepare("SELECT id, email, display_name, photo_url, role, kyc_verified, created_at FROM users WHERE id = ?");
+    $stmt = $db->prepare("SELECT id, email, display_name, photo_url, role, kyc_verified, subscription_plan, subscription_expires_at, created_at FROM users WHERE id = ?");
     $stmt->execute([$id]);
     $user = $stmt->fetch();
 

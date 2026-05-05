@@ -13,11 +13,12 @@ import {
   Info,
   DollarSign,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Sparkles
 } from 'lucide-react';
 import { Button } from '../shared/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../shared/ui/Card';
-import { generatePropertyDescription, estimatePropertyPrice } from '@/src/services/geminiService';
+import { generatePropertyDescription, estimatePropertyPrice, generateRoomDescription } from '@/src/services/geminiService';
 import { cn } from '@/src/lib/utils';
 import { apiCreateProperty, apiUploadImages } from '../../services/api';
 import { UserProfile } from '../../types';
@@ -61,6 +62,7 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
     planning_url: '',
     location_lat: 0,
     location_lng: 0,
+    room_images: [] as { room_type: string, url: string, description: string }[],
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiEstimation, setAiEstimation] = useState<any>(null);
@@ -70,8 +72,41 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
   const [uploadProgress, setUploadProgress] = useState('');
   const [isGeocodingAddress, setIsGeocodingAddress] = useState(false);
   const [geoError, setGeoError] = useState('');
+  
+  const [roomFiles, setRoomFiles] = useState<Record<string, File>>({});
+  const [roomPreviews, setRoomPreviews] = useState<Record<string, string>>({});
+  const [isGeneratingRooms, setIsGeneratingRooms] = useState(false);
 
-  const nextStep = () => setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  const validateStep = (step: number) => {
+    switch (step) {
+      case 1:
+        if (!formData.title.trim()) return 'Vui lòng nhập tiêu đề tin đăng';
+        if (formData.price <= 0) return 'Giá bán phải lớn hơn 0';
+        break;
+      case 2:
+        if (formData.area <= 0) return 'Diện tích phải lớn hơn 0';
+        if (!formData.legal) return 'Vui lòng chọn loại pháp lý';
+        break;
+      case 3:
+        if (!formData.address.trim()) return 'Vui lòng nhập địa chỉ chi tiết';
+        if (formData.location_lat === 0 || formData.location_lng === 0) return 'Vui lòng xác định tọa độ trên bản đồ';
+        break;
+      case 4:
+        if (selectedFiles.length === 0 && formData.images.length === 0) return 'Vui lòng tải lên ít nhất một ảnh cho bất động sản';
+        break;
+    }
+    return null;
+  };
+
+  const nextStep = () => {
+    const error = validateStep(currentStep);
+    if (error) {
+      alert(error);
+      return;
+    }
+    setCurrentStep((prev) => Math.min(prev + 1, steps.length));
+  };
+
   const prevStep = () => setCurrentStep((prev) => Math.max(prev - 1, 1));
 
   // Geocode address to get coordinates
@@ -97,7 +132,7 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
         });
         setGeoError('');
       } else {
-        setGeoError('Không tìm thấy địa chỉ. Vui lòng nhập chính xác hơn.');
+        setGeoError('Không tìm thấy địa chỉ. Vui lòng nhập chính xác hơn hoặc chọn thủ công.');
       }
     } catch (error) {
       setGeoError('Lỗi khi tìm kiếm địa chỉ. Vui lòng nhập tọa độ thủ công.');
@@ -110,6 +145,16 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
     if (!user) {
       alert('Vui lòng đăng nhập để đăng tin');
       return;
+    }
+
+    // Final validation of all steps
+    for (let i = 1; i <= 4; i++) {
+      const error = validateStep(i);
+      if (error) {
+        setCurrentStep(i);
+        alert(`Lỗi tại bước ${i}: ${error}`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -133,13 +178,14 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
         direction: formData.direction,
         legal: formData.legal,
         address: formData.address,
-        location_lat: formData.location_lat,
-        location_lng: formData.location_lng,
+        location_lat: formData.location_lat || 10.776,
+        location_lng: formData.location_lng || 106.701,
         video_url: formData.video_url,
         tour_3d_url: formData.tour_3d_url,
         legal_scan_url: formData.legal_scan_url,
         planning_url: formData.planning_url,
         images: finalImages,
+        room_images: formData.room_images,
         tags: [formData.type, formData.legal],
       });
       
@@ -152,6 +198,38 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
     } finally {
       setIsSubmitting(false);
       setUploadProgress('');
+    }
+  };
+
+  const handleRoomFileChange = async (roomType: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setRoomFiles(prev => ({ ...prev, [roomType]: file }));
+      setRoomPreviews(prev => ({ ...prev, [roomType]: URL.createObjectURL(file) }));
+
+      // Generate AI description immediately
+      setIsGeneratingRooms(true);
+      try {
+        const desc = await generateRoomDescription(roomType, formData.title || 'Bất động sản');
+        
+        // Upload image immediately to get URL
+        setUploadProgress(`Đang xử lý ảnh ${roomType}...`);
+        const uploadRes = await apiUploadImages([file], 'properties');
+        const url = uploadRes.urls[0];
+
+        setFormData(prev => {
+          const filtered = prev.room_images.filter(r => r.room_type !== roomType);
+          return {
+            ...prev,
+            room_images: [...filtered, { room_type: roomType, url, description: desc }]
+          };
+        });
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsGeneratingRooms(false);
+        setUploadProgress('');
+      }
     }
   };
 
@@ -449,6 +527,66 @@ export function PropertyStepper({ onComplete, onNavigate, user, onRefresh }: Pro
             )}
             <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
               <p className="text-xs text-blue-700">Tất cả hình ảnh tải lên sẽ được gắn logo bản quyền tự động. Xin vui lòng sử dụng hình thật để người mua có cái nhìn khách quan.</p>
+            </div>
+
+            <div className="pt-6 border-t">
+              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-blue-600" />
+                Guided Tour (Ảnh từng phòng)
+              </h3>
+              <p className="text-sm text-gray-500 mb-4 italic">
+                Cung cấp ảnh từng khu vực để AI tự động tạo lời giới thiệu cho khách hàng.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {[
+                  { id: 'living_room', label: 'Phòng khách' },
+                  { id: 'bedroom', label: 'Phòng ngủ' },
+                  { id: 'kitchen', label: 'Phòng bếp' },
+                  { id: 'bathroom', label: 'Phòng tắm' },
+                  { id: 'facade', label: 'Mặt tiền/Ngoại thất' },
+                  { id: 'balcony', label: 'Ban công/View' }
+                ].map(room => (
+                  <div key={room.id} className="space-y-2">
+                    <label className="block text-sm font-bold text-gray-700">{room.label}</label>
+                    <div className="flex gap-4 items-start">
+                      <div className="relative w-32 h-32 rounded-xl border-2 border-dashed border-gray-200 overflow-hidden shrink-0 group">
+                        {roomPreviews[room.id] ? (
+                          <>
+                            <img src={roomPreviews[room.id]} className="w-full h-full object-cover" alt="" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                              <label className="cursor-pointer text-white text-xs font-bold underline">Đổi ảnh</label>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-gray-50">
+                            <ImageIcon className="w-6 h-6 text-gray-300" />
+                            <span className="text-[10px] text-gray-400 mt-1">Chưa có ảnh</span>
+                          </div>
+                        )}
+                        <input 
+                          type="file" 
+                          className="absolute inset-0 opacity-0 cursor-pointer" 
+                          onChange={(e) => handleRoomFileChange(room.id, e)} 
+                        />
+                      </div>
+                      <div className="flex-1 min-h-[128px]">
+                        <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 h-full">
+                          {isGeneratingRooms && !formData.room_images.find(r => r.room_type === room.id) ? (
+                            <div className="flex items-center gap-2 text-blue-600 text-xs font-medium h-full justify-center">
+                              <Loader2 className="w-3 h-3 animate-spin" /> AI đang viết lời giới thiệu...
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-600 italic">
+                              {formData.room_images.find(r => r.room_type === room.id)?.description || "Lời giới thiệu sẽ được AI tự động tạo sau khi bạn chọn ảnh."}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );

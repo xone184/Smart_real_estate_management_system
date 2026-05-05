@@ -19,6 +19,7 @@ export interface Property {
     lng: number;
   };
   images: string[];
+  room_images: { room_type: string, url: string, description: string }[];
   video_url?: string;
   tour_3d_url?: string;
   legal_scan_url?: string;

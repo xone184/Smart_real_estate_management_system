@@ -39,6 +39,24 @@ export function PropertySchedule({ propertyId, user }: PropertyScheduleProps) {
 
   const times = ['09:00', '10:30', '14:00', '15:30', '17:00', '18:30'];
 
+  const isTimeInPast = (timeStr: string) => {
+    if (!selectedDate) return false;
+    
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
+    if (selectedDate !== todayStr) return false;
+
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const currentHours = now.getHours();
+    const currentMinutes = now.getMinutes();
+
+    if (hours < currentHours) return true;
+    if (hours === currentHours && minutes <= currentMinutes) return true;
+    
+    return false;
+  };
+
   return (
     <Card className="border-blue-100 shadow-xl shadow-blue-50/50 overflow-hidden">
       <div className="h-2 bg-blue-600" />
@@ -64,7 +82,13 @@ export function PropertySchedule({ propertyId, user }: PropertyScheduleProps) {
                   {dates.map((d) => (
                     <button
                       key={d.full}
-                      onClick={() => setSelectedDate(d.full)}
+                      onClick={() => {
+                        setSelectedDate(d.full);
+                        // If current selected time is now in the past for the new date, reset it
+                        if (selectedTime && isTimeInPast(selectedTime)) {
+                          setSelectedTime(null);
+                        }
+                      }}
                       className={`flex flex-col items-center justify-center min-w-[70px] p-3 rounded-2xl border-2 transition-all ${selectedDate === d.full ? 'border-blue-600 bg-blue-50 text-blue-600 scale-105' : 'border-gray-50 hover:border-blue-200 text-gray-500'}`}
                     >
                       <span className="text-[10px] uppercase font-bold mb-1 whitespace-nowrap">{d.day}</span>
@@ -77,15 +101,23 @@ export function PropertySchedule({ propertyId, user }: PropertyScheduleProps) {
               <div className="space-y-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Chọn khung giờ</p>
                 <div className="grid grid-cols-3 gap-2">
-                  {times.map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setSelectedTime(t)}
-                      className={`py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${selectedTime === t ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-gray-50 hover:border-blue-200 text-gray-500'}`}
-                    >
-                      {t}
-                    </button>
-                  ))}
+                  {times.map((t) => {
+                    const disabled = isTimeInPast(t);
+                    return (
+                      <button
+                        key={t}
+                        disabled={disabled}
+                        onClick={() => setSelectedTime(t)}
+                        className={`py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${
+                          disabled ? 'bg-gray-50 border-gray-50 text-gray-300 cursor-not-allowed opacity-60' :
+                          selectedTime === t ? 'border-blue-600 bg-blue-50 text-blue-600' : 
+                          'border-gray-50 hover:border-blue-200 text-gray-500'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

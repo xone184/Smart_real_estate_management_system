@@ -119,7 +119,7 @@ export function PropertyDetail({ property, onBack, onPropertyClick, similarPrope
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-[1440px] mx-auto px-4 py-8">
       <PropertyBreadcrumb 
         items={[
           { label: property.type === 'apartment' ? 'Căn hộ' : property.type === 'house' ? 'Nhà phố' : 'Đất nền', onClick: onBack },
@@ -153,7 +153,7 @@ export function PropertyDetail({ property, onBack, onPropertyClick, similarPrope
               )}
               {activeTab === 'tour' && (
                 <div className="aspect-video">
-                  <PropertyTour videoUrl={property.video_url} />
+                  <PropertyTour videoUrl={property.video_url} roomImages={property.room_images} />
                 </div>
               )}
             </div>
@@ -190,10 +190,22 @@ export function PropertyDetail({ property, onBack, onPropertyClick, similarPrope
           <div className="space-y-6">
             <div className="flex justify-between items-start">
               <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{property.title}</h1>
+                <div className="flex items-center gap-3 mb-2 flex-wrap">
+                  <div className={cn(
+                    "text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider w-fit shadow-sm",
+                    property.type === 'house' ? 'bg-indigo-600' :
+                    property.type === 'apartment' ? 'bg-emerald-600' :
+                    property.type === 'land' ? 'bg-amber-600' :
+                    property.type === 'villa' ? 'bg-purple-600' : 'bg-blue-600'
+                  )}>
+                    {property.type === 'house' ? 'Nhà phố' :
+                     property.type === 'apartment' ? 'Căn hộ' :
+                     property.type === 'land' ? 'Đất nền' :
+                     property.type === 'villa' ? 'Biệt thự' : property.type}
+                  </div>
                   <PropertyVerification status="verified" />
                 </div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
                 <div className="flex items-center text-gray-500 gap-4">
                   <div className="flex items-center"><MapPin className="w-4 h-4 mr-1 text-blue-500" /> {property.address}</div>
                   <div className="flex items-center"><Calendar className="w-4 h-4 mr-1 text-blue-500" /> Đăng 2 ngày trước</div>

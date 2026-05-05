@@ -90,7 +90,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
       </section>
 
       {/* Quick Contact Cards */}
-      <section className="max-w-7xl mx-auto px-4 -mt-8 relative z-10 mb-16">
+      <section className="max-w-[1440px] mx-auto px-4 -mt-8 relative z-10 mb-16">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[
             { icon: <Phone className="w-6 h-6 text-blue-600" />, bg: 'bg-blue-50', title: 'Hotline 24/7', value: '1800 6789', sub: 'Miễn phí cuộc gọi' },
@@ -119,7 +119,7 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
       </section>
 
       {/* Form + Offices */}
-      <section className="max-w-7xl mx-auto px-4">
+      <section className="max-w-[1440px] mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-12">
           {/* Contact Form */}
           <div className="lg:col-span-3">

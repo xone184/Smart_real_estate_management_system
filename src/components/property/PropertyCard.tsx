@@ -67,6 +67,13 @@ export function PropertyCard({ property, onClick, onToggleComparison, isComparin
     villa: 'Biệt thự',
   };
 
+  const typeColors: Record<string, string> = {
+    house: 'bg-indigo-600',
+    apartment: 'bg-emerald-600',
+    land: 'bg-amber-600',
+    villa: 'bg-purple-600',
+  };
+
   return (
     <motion.div
       whileHover={{ y: -5 }}
@@ -85,10 +92,13 @@ export function PropertyCard({ property, onClick, onToggleComparison, isComparin
           />
           {/* Top Left Badges */}
           <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <div className="bg-blue-600 text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider w-fit">
+            <div className={cn(
+              "text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider w-fit shadow-sm",
+              typeColors[property.type] || 'bg-blue-600'
+            )}>
               {typeLabels[property.type] || property.type}
             </div>
-            <PropertyVerification status="verified" />
+            <PropertyVerification status="verified" variant="compact" />
           </div>
 
           {/* Top Right Buttons */}

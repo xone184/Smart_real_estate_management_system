@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../shared/ui/Card';
 import { Button } from '../shared/ui/Button';
-import { User, Settings, List, Heart, Bell, LogOut, ShieldCheck, Clock, MapPin, ArrowRight, Trash2, Camera, Lock, Save, CheckCircle2, CalendarClock, Calendar as CalendarIcon, Phone, Package, Zap, Sparkles, Shield, BadgeCheck, Ban } from 'lucide-react';
+import { User, Settings, List, Heart, Bell, LogOut, ShieldCheck, Clock, MapPin, ArrowRight, Trash2, Camera, Lock, Save, CheckCircle2, CalendarClock, Calendar as CalendarIcon, Phone, Package, Zap, Sparkles, Shield, BadgeCheck, Ban, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Avatar } from '../shared/Avatar';
 import { apiGetProperties, apiGetSavedProperties, apiUnsaveProperty, apiGetNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiUpdateUser, ApiNotification, apiGetAppointments, ApiAppointment, apiUpdateAppointmentStatus, apiBulkUpdateAppointmentStatus, apiUploadImages, apiDeleteProperty, apiUpdateProperty, apiGetMySubscriptions, apiCancelSubscription, ApiSubscription } from '../../services/api';
@@ -44,6 +44,12 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
   const [aptStatusFilter, setAptStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled' | 'completed'>('all');
   const [selectedAptIds, setSelectedAptIds] = useState<number[]>([]);
   const [bulkConfirming, setBulkConfirming] = useState(false);
+  const [aptPage, setAptPage] = useState(1);
+  const aptItemsPerPage = 2;
+
+  useEffect(() => {
+    setAptPage(1);
+  }, [aptFrom, aptTo, aptShowOverdue, aptStatusFilter]);
 
   const handleDeleteListing = async (id: number) => {
     if (!window.confirm('Bạn có chắc chắn muốn xóa Bất động sản này? Dữ liệu không thể phục hồi.')) return;
@@ -404,6 +410,9 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
           }
         };
 
+        const totalAptPages = Math.ceil(filteredAppointments.length / aptItemsPerPage);
+        const paginatedAppointments = filteredAppointments.slice((aptPage - 1) * aptItemsPerPage, aptPage * aptItemsPerPage);
+
         return (
           <Card>
             <CardHeader className="flex flex-col gap-4">
@@ -480,108 +489,156 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
                   <p>Không có lịch hẹn phù hợp.</p>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {filteredAppointments.map((apt) => {
-                    const isOwner = apt.owner_id === user?.id;
-                    const isOverdue = !!apt.is_overdue && apt.status === 'pending';
-                    const canSelect = isOwner && apt.status === 'pending';
-                    return (
-                      <div key={apt.id} className="border border-gray-100 rounded-2xl p-4 md:p-6 bg-white shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            {canSelect && (
-                              <input
-                                type="checkbox"
-                                className="w-4 h-4"
-                                checked={selectedAptIds.includes(apt.id)}
-                                onChange={() => toggleSelect(apt.id)}
-                              />
+                <div className="space-y-6">
+                  <div className="space-y-4">
+                    {paginatedAppointments.map((apt) => {
+                      const isOwner = apt.owner_id === user?.id;
+                      const isOverdue = !!apt.is_overdue && apt.status === 'pending';
+                      const canSelect = isOwner && apt.status === 'pending';
+                      return (
+                        <div key={apt.id} className="border border-gray-100 rounded-2xl p-4 md:p-6 bg-white shadow-sm flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              {canSelect && (
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4"
+                                  checked={selectedAptIds.includes(apt.id)}
+                                  onChange={() => toggleSelect(apt.id)}
+                                />
+                              )}
+                              <span className={cn(
+                                "px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase",
+                                isOverdue ? 'bg-red-100 text-red-700' :
+                                apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                                apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                                apt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                'bg-red-100 text-red-700'
+                              )}>
+                                {isOverdue ? 'Quá hạn' :
+                                 apt.status === 'pending' ? 'Chờ xác nhận' :
+                                 apt.status === 'confirmed' ? 'Đã chốt lịch' :
+                                 apt.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'}
+                              </span>
+                              <span className={cn(
+                                "px-2 py-0.5 rounded text-xs font-semibold",
+                                isOwner ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"
+                              )}>
+                                {isOwner ? 'Chủ nhà' : 'Khách hẹn xem nhà'}
+                              </span>
+                            </div>
+                            
+                            <h4 className="font-bold text-gray-900 line-clamp-1">{apt.property_title}</h4>
+                            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+                              <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 flex-none py-1.5 rounded-lg">
+                                <CalendarIcon className="w-4 h-4" />
+                                <span className="font-bold">{apt.visit_date}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg flex-none">
+                                <Clock className="w-4 h-4" />
+                                {apt.time_slot}
+                              </div>
+                            </div>
+                            <div className="text-sm border-t border-gray-50 pt-3 mt-3">
+                              <span className="text-gray-400 mr-2">{isOwner ? 'Người đăng ký:' : 'Chủ nhà:'}</span>
+                              <span className="font-semibold text-gray-700">{isOwner ? apt.visitor_name : apt.owner_name}</span>
+                            </div>
+                            {apt.message && (
+                              <p className="text-sm italic text-gray-500 bg-gray-50 p-2 rounded block mt-2">"{apt.message}"</p>
                             )}
-                            <span className={cn(
-                              "px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wider uppercase",
-                              isOverdue ? 'bg-red-100 text-red-700' :
-                              apt.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                              apt.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                              apt.status === 'completed' ? 'bg-green-100 text-green-700' :
-                              'bg-red-100 text-red-700'
-                            )}>
-                              {isOverdue ? 'Quá hạn' :
-                               apt.status === 'pending' ? 'Chờ xác nhận' :
-                               apt.status === 'confirmed' ? 'Đã chốt lịch' :
-                               apt.status === 'completed' ? 'Hoàn thành' : 'Đã hủy'}
-                            </span>
-                            <span className={cn(
-                              "px-2 py-0.5 rounded text-xs font-semibold",
-                              isOwner ? "bg-purple-100 text-purple-700" : "bg-gray-100 text-gray-700"
-                            )}>
-                              {isOwner ? 'Chủ nhà' : 'Khách hẹn xem nhà'}
-                            </span>
                           </div>
                           
-                          <h4 className="font-bold text-gray-900 line-clamp-1">{apt.property_title}</h4>
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 flex-none py-1.5 rounded-lg">
-                              <CalendarIcon className="w-4 h-4" />
-                              <span className="font-bold">{apt.visit_date}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 font-bold text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg flex-none">
-                              <Clock className="w-4 h-4" />
-                              {apt.time_slot}
-                            </div>
-                          </div>
-                          <div className="text-sm border-t border-gray-50 pt-3 mt-3">
-                            <span className="text-gray-400 mr-2">{isOwner ? 'Người đăng ký:' : 'Chủ nhà:'}</span>
-                            <span className="font-semibold text-gray-700">{isOwner ? apt.visitor_name : apt.owner_name}</span>
-                          </div>
-                          {apt.message && (
-                            <p className="text-sm italic text-gray-500 bg-gray-50 p-2 rounded block mt-2">"{apt.message}"</p>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-none border-gray-100">
-                          {isOwner && apt.status === 'pending' && (
-                            <Button 
-                              size="sm" 
-                              className="bg-blue-600 hover:bg-blue-700 w-full"
-                              onClick={async () => {
-                                await apiUpdateAppointmentStatus(apt.id, 'confirmed');
-                                fetchData();
-                              }}
-                            >
-                              Xác nhận lịch
-                            </Button>
-                          )}
-                          {(apt.status === 'pending' || apt.status === 'confirmed') && (
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
-                              onClick={async () => {
-                                if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
-                                  await apiUpdateAppointmentStatus(apt.id, 'cancelled');
+                          <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-none border-gray-100">
+                            {isOwner && apt.status === 'pending' && (
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-600 hover:bg-blue-700 w-full"
+                                onClick={async () => {
+                                  await apiUpdateAppointmentStatus(apt.id, 'confirmed');
                                   fetchData();
-                                }
-                              }}
-                            >
-                              Hủy lịch hẹn
-                            </Button>
-                          )}
-                           {isOwner && apt.status === 'confirmed' && (
-                            <Button 
-                              size="sm" 
-                              className="w-full bg-green-600 hover:bg-green-700"
-                              onClick={async () => {
-                                await apiUpdateAppointmentStatus(apt.id, 'completed');
-                                fetchData();
-                              }}
-                            >
-                              Đã xem xong
-                            </Button>
-                          )}
+                                }}
+                              >
+                                Xác nhận lịch
+                              </Button>
+                            )}
+                            {(apt.status === 'pending' || apt.status === 'confirmed') && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50 border-red-100"
+                                onClick={async () => {
+                                  if (confirm('Bạn có chắc chắn muốn hủy lịch hẹn này?')) {
+                                    await apiUpdateAppointmentStatus(apt.id, 'cancelled');
+                                    fetchData();
+                                  }
+                                }}
+                              >
+                                Hủy lịch hẹn
+                              </Button>
+                            )}
+                             {isOwner && apt.status === 'confirmed' && (
+                              <Button 
+                                size="sm" 
+                                className="w-full bg-green-600 hover:bg-green-700"
+                                onClick={async () => {
+                                  await apiUpdateAppointmentStatus(apt.id, 'completed');
+                                  await apiUpdateProperty(apt.property_id, { status: 'sold' });
+                                  fetchData();
+                                }}
+                              >
+                                Đã xem xong
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination Controls */}
+                  {totalAptPages > 1 && (
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-6">
+                      <p className="text-sm text-gray-500">
+                        Hiển thị <span className="font-bold text-gray-900">{(aptPage - 1) * aptItemsPerPage + 1} - {Math.min(aptPage * aptItemsPerPage, filteredAppointments.length)}</span> trong <span className="font-bold text-gray-900">{filteredAppointments.length}</span> lịch hẹn
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={aptPage === 1}
+                          onClick={() => setAptPage(prev => prev - 1)}
+                          className="rounded-lg h-9 w-9 p-0"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                        </Button>
+                        
+                        {[...Array(totalAptPages)].map((_, i) => (
+                          <Button
+                            key={i}
+                            variant={aptPage === i + 1 ? 'primary' : 'outline'}
+                            size="sm"
+                            onClick={() => setAptPage(i + 1)}
+                            className={cn(
+                              "h-9 w-9 p-0 rounded-lg",
+                              aptPage === i + 1 ? "bg-blue-600 text-white" : "text-gray-600"
+                            )}
+                          >
+                            {i + 1}
+                          </Button>
+                        ))}
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={aptPage === totalAptPages}
+                          onClick={() => setAptPage(prev => prev + 1)}
+                          className="rounded-lg h-9 w-9 p-0"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </Button>
                       </div>
-                    );
-                  })}
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -927,7 +984,7 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-[1440px] mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-6">

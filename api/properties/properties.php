@@ -55,6 +55,11 @@ function ensureModerationColumns(PDO $db): void {
     if (!$planningExists) {
         $db->exec("ALTER TABLE properties ADD COLUMN planning_url VARCHAR(500) DEFAULT ''");
     }
+
+    $roomImagesExists = $db->query("SHOW COLUMNS FROM properties LIKE 'room_images'")->fetch();
+    if (!$roomImagesExists) {
+        $db->exec("ALTER TABLE properties ADD COLUMN room_images TEXT NULL DEFAULT NULL");
+    }
     $checked = true;
 }
 
@@ -180,6 +185,7 @@ function getProperties(): void {
     // Parse JSON fields
     foreach ($properties as &$prop) {
         $prop['images'] = json_decode($prop['images'], true) ?: [];
+        $prop['room_images'] = json_decode($prop['room_images'] ?? '', true) ?: [];
         $prop['tags'] = json_decode($prop['tags'], true) ?: [];
         $prop['id'] = (int) $prop['id'];
         $prop['price'] = (float) $prop['price'];
@@ -213,6 +219,7 @@ function getProperty(int $id): void {
 
     // Parse JSON fields
     $prop['images'] = json_decode($prop['images'], true) ?: [];
+    $prop['room_images'] = json_decode($prop['room_images'] ?? '', true) ?: [];
     $prop['tags'] = json_decode($prop['tags'], true) ?: [];
     $prop['id'] = (int) $prop['id'];
     $prop['price'] = (float) $prop['price'];
@@ -248,9 +255,9 @@ function createProperty(): void {
     ensureModerationColumns($db);
     $stmt = $db->prepare("INSERT INTO properties (
         title, description, type, price, area, bedrooms, bathrooms,
-        direction, legal, address, location_lat, location_lng, images,
+        direction, legal, address, location_lat, location_lng, images, room_images,
         video_url, tour_3d_url, legal_scan_url, planning_url, owner_id, status, tags
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     $stmt->execute([
         $data['title'],
@@ -266,6 +273,7 @@ function createProperty(): void {
         (float) ($data['location_lat'] ?? 10.776),
         (float) ($data['location_lng'] ?? 106.701),
         $images,
+        json_encode($data['room_images'] ?? []),
         $data['video_url'] ?? '',
         $data['tour_3d_url'] ?? '',
         $data['legal_scan_url'] ?? '',
@@ -298,14 +306,18 @@ function updateProperty(int $id): void {
     }
 
     // Build dynamic update
-    $allowed = ['title', 'description', 'type', 'price', 'area', 'bedrooms', 'bathrooms', 'direction', 'legal', 'address', 'status', 'video_url', 'tour_3d_url', 'legal_scan_url', 'planning_url'];
+    $allowed = ['title', 'description', 'type', 'price', 'area', 'bedrooms', 'bathrooms', 'direction', 'legal', 'address', 'status', 'video_url', 'tour_3d_url', 'legal_scan_url', 'planning_url', 'room_images'];
     $sets = [];
     $params = [];
 
     foreach ($allowed as $field) {
         if (isset($data[$field])) {
             $sets[] = "{$field} = ?";
-            $params[] = $data[$field];
+            if ($field === 'room_images') {
+                $params[] = is_string($data[$field]) ? $data[$field] : json_encode($data[$field]);
+            } else {
+                $params[] = $data[$field];
+            }
         }
     }
 

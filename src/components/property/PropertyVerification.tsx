@@ -1,25 +1,42 @@
 import React from 'react';
 import { ShieldCheck, CheckCircle2, Award, Info } from 'lucide-react';
 import { motion } from 'motion/react';
+import { cn } from '@/src/lib/utils';
 
 interface PropertyVerificationProps {
   status: 'verified' | 'pending' | 'unverified';
+  variant?: 'full' | 'compact';
 }
 
-export function PropertyVerification({ status }: PropertyVerificationProps) {
+export function PropertyVerification({ status, variant = 'full' }: PropertyVerificationProps) {
+  const isCompact = variant === 'compact';
+
   if (status === 'verified') {
     return (
       <motion.div 
         initial={{ scale: 0.9, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="flex items-center gap-2 px-4 py-2 bg-green-50 rounded-2xl border border-green-100 shadow-sm shadow-green-50 group cursor-help relative"
+        className={cn(
+          "flex items-center gap-2 bg-green-50 rounded-2xl border border-green-100 shadow-sm shadow-green-50 group cursor-help relative",
+          isCompact ? "px-2 py-1 gap-1" : "px-4 py-2"
+        )}
       >
-        <div className="p-1.5 bg-green-500 rounded-full text-white shadow-sm group-hover:scale-110 transition-transform">
-          <ShieldCheck className="w-4 h-4" />
+        <div className={cn(
+          "bg-green-500 rounded-full text-white shadow-sm group-hover:scale-110 transition-transform flex items-center justify-center",
+          isCompact ? "p-0.5" : "p-1.5"
+        )}>
+          <ShieldCheck className={isCompact ? "w-3 h-3" : "w-4 h-4"} />
         </div>
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-green-700 uppercase tracking-wider">Tin đăng đã xác thực</span>
-          <span className="text-[10px] text-green-600/70 font-bold">Bởi SmartEstate AI & Chuyên viên</span>
+          <span className={cn(
+            "font-bold text-green-700 uppercase tracking-wider",
+            isCompact ? "text-[8px]" : "text-xs"
+          )}>
+            Tin đăng đã xác thực
+          </span>
+          {!isCompact && (
+            <span className="text-[10px] text-green-600/70 font-bold">Bởi SmartEstate AI & Chuyên viên</span>
+          )}
         </div>
         
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-64 p-4 bg-gray-900 text-white rounded-2xl text-xs opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 shadow-2xl">
@@ -41,9 +58,17 @@ export function PropertyVerification({ status }: PropertyVerificationProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-2xl border border-gray-100">
-      <Info className="w-4 h-4 text-gray-400" />
-      <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Đang chờ xác thực</span>
+    <div className={cn(
+      "flex items-center gap-2 bg-gray-50 rounded-2xl border border-gray-100",
+      isCompact ? "px-2 py-1 gap-1" : "px-4 py-2"
+    )}>
+      <Info className={isCompact ? "w-3 h-3 text-gray-400" : "w-4 h-4 text-gray-400"} />
+      <span className={cn(
+        "font-bold text-gray-500 uppercase tracking-wider",
+        isCompact ? "text-[8px]" : "text-xs"
+      )}>
+        Đang chờ xác thực
+      </span>
     </div>
   );
 }

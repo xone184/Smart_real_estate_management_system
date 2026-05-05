@@ -40,6 +40,7 @@ import {
 } from '../../services/api';
 import { Property, UserProfile } from '../../types';
 import { MarketDashboard } from './MarketDashboard';
+import { PropertyMortgage } from '../property/PropertyMortgage';
 
 // ─── Plan config ────────────────────────────────────────────────────────────
 const planMeta: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
@@ -106,6 +107,11 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, propSearch, userSearch, subFilter, propertyStatusFilter, propertyFromDate, propertyToDate, filters]);
 
   useEffect(() => { fetchData(); }, []);
 
@@ -381,7 +387,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     return statusMatch && searchMatch && fromMatch && toMatch;
   });
 
-  const allVisibleSelected = visibleProperties.length > 0 && visibleProperties.every((p) => selectedPropertyIds.includes(p.id));
+  const selectableProperties = visibleProperties.filter(p => p.status === 'pending');
+  const allVisibleSelected = selectableProperties.length > 0 && selectableProperties.every((p) => selectedPropertyIds.includes(p.id));
   const selectedCount = selectedPropertyIds.length;
 
   const togglePropertySelection = (id: number) => {
@@ -390,10 +397,10 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   const toggleSelectAllVisible = () => {
     if (allVisibleSelected) {
-      setSelectedPropertyIds((prev) => prev.filter((id) => !visibleProperties.some((p) => p.id === id)));
+      setSelectedPropertyIds((prev) => prev.filter((id) => !selectableProperties.some((p) => p.id === id)));
       return;
     }
-    setSelectedPropertyIds((prev) => Array.from(new Set([...prev, ...visibleProperties.map((p) => p.id)])));
+    setSelectedPropertyIds((prev) => Array.from(new Set([...prev, ...selectableProperties.map((p) => p.id)])));
   };
 
   const visibleUsers = users.filter((u) => {
@@ -401,6 +408,18 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     if (!q) return true;
     return (u.display_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
   });
+
+  const renderPagination = (totalItems: number) => {
+    const totalPages = Math.ceil(totalItems / 15);
+    if (totalPages <= 1) return null;
+    return (
+      <div className="flex items-center justify-center gap-2 py-4 mt-4 border-t border-gray-100">
+        <Button variant="outline" size="sm" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} className="rounded-xl">Trước</Button>
+        <span className="text-sm font-medium text-gray-600">Trang {currentPage} / {totalPages}</span>
+        <Button variant="outline" size="sm" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} className="rounded-xl">Sau</Button>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -417,7 +436,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Quản trị hệ thống</h1>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Quản trị hệ thống</h1>
           <p className="text-gray-500">Chào mừng trở lại, Quản trị viên</p>
         </div>
         <div className="flex items-center gap-3">
@@ -435,8 +454,8 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       {/* Property detail modal */}
       {viewingProperty && (
         <div className="fixed inset-0 z-[180] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0">
               <div>
                 <h3 className="text-xl font-bold text-gray-900">Chi tiết tin đăng</h3>
                 <p className="text-xs text-gray-500 mt-1">ID: #{viewingProperty.id}</p>
@@ -446,8 +465,9 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               </button>
             </div>
 
-            <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
+            <div className="overflow-y-auto p-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
                 <img
                   src={viewingProperty.images?.[0] || 'https://via.placeholder.com/800x600?text=No+Image'}
                   alt={viewingProperty.title}
@@ -505,9 +525,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   </div>
                 )}
               </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-6">
+                <PropertyMortgage price={viewingProperty.price} />
+              </div>
             </div>
 
-            <div className="p-6 border-t border-gray-100 flex justify-end gap-2">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-2 shrink-0">
               <Button variant="outline" className="rounded-xl" onClick={() => setViewingProperty(null)}>Đóng</Button>
               <Button className="bg-green-600 hover:bg-green-700 rounded-xl" onClick={async () => { await handleApprove(viewingProperty.id); setViewingProperty(null); }}>
                 Duyệt tin
@@ -886,14 +911,17 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {visibleProperties.map((prop) => (
+                  {visibleProperties.slice((currentPage - 1) * 15, currentPage * 15).map((prop) => (
                     <tr key={prop.id} className="group hover:bg-gray-50/50 transition-colors">
                       <td className="py-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedPropertyIds.includes(prop.id)}
-                          onChange={() => togglePropertySelection(prop.id)}
-                        />
+                        {prop.status === 'pending' && (
+                          <input
+                            type="checkbox"
+                            checked={selectedPropertyIds.includes(prop.id)}
+                            onChange={() => togglePropertySelection(prop.id)}
+                            className="w-4 h-4 text-blue-600 rounded border-gray-300"
+                          />
+                        )}
                       </td>
                       <td className="py-4">
                         <div className="flex items-center gap-3">
@@ -934,26 +962,30 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                             <Eye className="w-4 h-4 mr-1" />
                             Xem
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-green-600 hover:bg-green-50 rounded-lg"
-                            onClick={() => handleApprove(prop.id)}
-                            title="Duyệt tin"
-                          >
-                            <CheckCircle className="w-4 h-4 mr-1" />
-                            Duyệt
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:bg-red-50 rounded-lg"
-                            onClick={() => handleReject(prop.id)}
-                            title="Từ chối tin"
-                          >
-                            <XCircle className="w-4 h-4 mr-1" />
-                            Từ chối
-                          </Button>
+                          {prop.status === 'pending' && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-green-600 hover:bg-green-50 rounded-lg"
+                                onClick={() => handleApprove(prop.id)}
+                                title="Duyệt tin"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Duyệt
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-red-600 hover:bg-red-50 rounded-lg"
+                                onClick={() => handleReject(prop.id)}
+                                title="Từ chối tin"
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Từ chối
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -961,6 +993,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </tbody>
               </table>
             </div>
+            {renderPagination(visibleProperties.length)}
           </CardContent>
         </Card>
       )}
@@ -983,7 +1016,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {visibleUsers.map((u) => (
+              {visibleUsers.slice((currentPage - 1) * 15, currentPage * 15).map((u) => (
                 <div key={u.id} className="p-6 rounded-3xl border border-gray-100 hover:border-blue-100 transition-all group">
                   <div className="flex items-center gap-4 mb-6">
                     <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center text-blue-600 text-xl font-bold overflow-hidden">
@@ -999,18 +1032,21 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                       <Shield className="w-4 h-4 text-blue-600" />
                       <span className="text-xs font-bold text-gray-700 uppercase">{u.role}</span>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="rounded-xl"
-                      onClick={() => onNavigate?.('admin-users')}
-                    >
-                      Thiết lập
-                    </Button>
+                    {u.role !== 'admin' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="rounded-xl"
+                        onClick={() => onNavigate?.('admin-users')}
+                      >
+                        Thiết lập
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
+            {renderPagination(visibleUsers.length)}
           </CardContent>
         </Card>
       )}
@@ -1081,7 +1117,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {filteredSubs.map((sub) => {
+                  {filteredSubs.slice((currentPage - 1) * 15, currentPage * 15).map((sub) => {
                     const pm = planMeta[sub.plan_name] ?? planMeta.basic;
                     const sm = statusMeta[sub.status] ?? statusMeta.pending;
                     const isPending    = sub.status === 'pending';
@@ -1166,6 +1202,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                   })}
                 </div>
               )}
+              {filteredSubs.length > 0 && renderPagination(filteredSubs.length)}
             </CardContent>
           </Card>
         </div>

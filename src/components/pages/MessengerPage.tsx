@@ -108,7 +108,7 @@ export function MessengerPage({ user, defaultReceiverId }: MessengerPageProps) {
   // ── auto-scroll to bottom ──────────────────────────────────────────────────
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages.length, messages[messages.length - 1]?.id]);
 
   // ── API calls ─────────────────────────────────────────────────────────────
   const loadContacts = async () => {

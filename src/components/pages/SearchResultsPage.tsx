@@ -90,7 +90,7 @@ export function SearchResultsPage({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <div className="max-w-[1440px] mx-auto px-4 py-8">
       {/* Search Header */}
       <div className="flex items-center text-sm text-gray-500 mb-6">
         <button onClick={() => onNavigate?.('home')} className="hover:text-blue-600 transition-colors">

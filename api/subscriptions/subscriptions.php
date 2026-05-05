@@ -17,7 +17,11 @@ switch ($method) {
         }
         break;
     case 'POST':
-        createSubscription();
+        if ($action === 'admin_assign_plan') {
+            adminAssignPlan();
+        } else {
+            createSubscription();
+        }
         break;
     case 'PUT':
         if (!$id) jsonResponse(400, ['error' => 'ID là bắt buộc']);
@@ -176,6 +180,57 @@ function updateSubscriptionStatus(int $id): void {
     }
 
     jsonResponse(200, ['message' => 'Cập nhật trạng thái thành công', 'status' => $status]);
+}
+
+// ── Admin trực tiếp gán gói cho người dùng ───────────────────────────────────
+function adminAssignPlan(): void {
+    requireAdmin();
+    $data = getRequestBody();
+
+    $user_id    = $data['user_id']    ?? null;
+    $plan_name  = $data['plan_name']  ?? '';
+    $plan_label = $data['plan_label'] ?? '';
+
+    if (!$user_id) {
+        jsonResponse(400, ['error' => 'User ID là bắt buộc']);
+    }
+
+    $allowed_plans = ['basic', 'professional', 'enterprise'];
+    if (!in_array($plan_name, $allowed_plans)) {
+        jsonResponse(400, ['error' => 'Gói dịch vụ không hợp lệ']);
+    }
+
+    $db = getDB();
+
+    // Huỷ các yêu cầu pending cũ của user này
+    $db->prepare("
+        UPDATE subscriptions SET status = 'cancelled'
+        WHERE user_id = ? AND status = 'pending'
+    ")->execute([$user_id]);
+
+    // Tạo một record subscription mới với trạng thái active
+    $stmt = $db->prepare("
+        INSERT INTO subscriptions (user_id, plan_name, plan_label, price_vnd, payment_method, status, note, approved_at)
+        VALUES (?, ?, ?, ?, ?, 'active', ?, NOW())
+    ");
+    
+    $price = 'Miễn phí';
+    if ($plan_name === 'professional') $price = '499.000đ/tháng';
+    if ($plan_name === 'enterprise')   $price = 'Liên hệ';
+
+    $stmt->execute([
+        $user_id,
+        $plan_name,
+        $plan_label ?: ucfirst($plan_name),
+        $price,
+        'direct_assignment',
+        'Được gán trực tiếp bởi Quản trị viên'
+    ]);
+
+    // Kích hoạt gói cho user
+    activateUserPlan($db, (int) $user_id, $plan_name);
+
+    jsonResponse(200, ['message' => "Đã gán gói " . ($plan_label ?: $plan_name) . " thành công"]);
 }
 
 // ── User tự huỷ gói đang pending ─────────────────────────────────────────────

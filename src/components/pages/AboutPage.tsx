@@ -97,7 +97,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       </section>
 
       {/* Stats */}
-      <section className="max-w-7xl mx-auto px-4 -mt-10 relative z-10">
+      <section className="max-w-[1440px] mx-auto px-4 -mt-10 relative z-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {stats.map((stat, idx) => (
             <motion.div
@@ -118,7 +118,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       </section>
 
       {/* Mission & Vision */}
-      <section className="max-w-7xl mx-auto px-4 py-20">
+      <section className="max-w-[1440px] mx-auto px-4 py-20">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             {
@@ -188,7 +188,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       </section>
 
       {/* Team */}
-      <section className="max-w-7xl mx-auto px-4 py-20">
+      <section className="max-w-[1440px] mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">Đội ngũ lãnh đạo</h2>
           <p className="text-gray-500">Những con người tạo nên SmartRE</p>
@@ -219,7 +219,7 @@ export function AboutPage({ onNavigate }: AboutPageProps) {
       </section>
 
       {/* CTA */}
-      <section className="max-w-7xl mx-auto px-4 pb-4">
+      <section className="max-w-[1440px] mx-auto px-4 pb-4">
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-12 text-white text-center relative overflow-hidden">
           <div className="absolute inset-0 opacity-10">
             <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white blur-2xl" />

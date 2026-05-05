@@ -112,7 +112,36 @@ export async function chatWithAI(message: string, history: {role: string, conten
     
     return data.choices[0].message.content;
   } catch (error) {
-    console.error("Error in AI chat (Groq):", error);
-    return "Xin lỗi, tôi đang bảo trì hệ thống máy chủ. Vui lòng quay lại sau.";
+    console.error("AI Chat Error:", error);
+    return "Tôi đang gặp khó khăn khi kết nối với hệ thống. Vui lòng thử lại sau.";
+  }
+}
+
+export async function generateRoomDescription(roomType: string, propertyTitle: string) {
+  const prompt = `Bạn là một chuyên gia nội thất và môi giới bất động sản. 
+  Hãy viết 1 đoạn văn ngắn (khoảng 2-3 câu) giới thiệu về ${roomType} của bất động sản "${propertyTitle}".
+  Phong cách: Sang trọng, mời gọi, tập trung vào công năng và cảm giác không gian.
+  Không dùng các từ như "Tôi là", "Trong ảnh này", hãy bắt đầu trực tiếp vào việc giới thiệu phòng.`;
+
+  try {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.8,
+        max_tokens: 200,
+      })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message);
+    return data.choices[0].message.content;
+  } catch (error) {
+    console.error("Error generating room description:", error);
+    return `Không gian ${roomType} rộng rãi, thoáng mát, được thiết kế tối ưu công năng sử dụng.`;
   }
 }

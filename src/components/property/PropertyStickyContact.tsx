@@ -14,7 +14,7 @@ export function PropertyStickyContact({ price }: PropertyStickyContactProps) {
       animate={{ y: 0 }}
       className="fixed bottom-0 left-0 right-0 z-50 lg:hidden p-4 bg-white/80 backdrop-blur-xl border-t border-gray-100 shadow-2xl"
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div className="max-w-[1440px] mx-auto flex items-center justify-between gap-4">
         <div className="flex flex-col">
           <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Giá bán</p>
           <p className="text-xl font-bold text-blue-600">{price}</p>
