@@ -24,18 +24,24 @@ function roleBadge(role: string) {
   return 'Người dùng';
 }
 
-const API_BASE = 'http://localhost:8080';
-
 function resolvePhoto(photo?: string): string | undefined {
   if (!photo) return undefined;
   if (photo.startsWith('http://') || photo.startsWith('https://')) return photo;
-  return `${API_BASE}${photo.startsWith('/') ? '' : '/'}${photo}`;
+  // Use current origin so it works on any host/port (XAMPP, dev server, etc.)
+  const base = window.location.origin;
+  return `${base}${photo.startsWith('/') ? '' : '/'}${photo}`;
 }
 
 function Avatar({
   name, photo, size = 10,
 }: { name?: string; photo?: string; size?: number }) {
   const src = resolvePhoto(photo);
+  const [imgError, setImgError] = React.useState(false);
+
+  // Reset error state when photo changes
+  React.useEffect(() => { setImgError(false); }, [photo]);
+
+  const showImg = src && !imgError;
   return (
     <div
       className={cn(
@@ -43,8 +49,8 @@ function Avatar({
       )}
       style={{ width: size * 4, height: size * 4, minWidth: size * 4 }}
     >
-      {src
-        ? <img src={src} className="w-full h-full object-cover" alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+      {showImg
+        ? <img src={src} className="w-full h-full object-cover" alt="" onError={() => setImgError(true)} />
         : <span style={{ fontSize: size * 1.6 }}>{name?.charAt(0) || '?'}</span>}
     </div>
   );
@@ -77,7 +83,6 @@ export function MessengerPage({ user, defaultReceiverId }: MessengerPageProps) {
   const [searchQ, setSearchQ]             = useState('');
   const [mobileView, setMobileView]       = useState<'list' | 'chat'>('list');
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollRef        = useRef<ReturnType<typeof setInterval> | null>(null);
   const inputRef       = useRef<HTMLInputElement>(null);
 
@@ -105,10 +110,8 @@ export function MessengerPage({ user, defaultReceiverId }: MessengerPageProps) {
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [activeConvId]);
 
-  // ── auto-scroll to bottom ──────────────────────────────────────────────────
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length, messages[messages.length - 1]?.id]);
+  // Auto-scroll removed as per user request
+
 
   // ── API calls ─────────────────────────────────────────────────────────────
   const loadContacts = async () => {
@@ -450,7 +453,7 @@ export function MessengerPage({ user, defaultReceiverId }: MessengerPageProps) {
                       </div>
                     );
                   })}
-                  <div ref={messagesEndRef} />
+                  {/* Auto-scroll div removed */}
                 </>
               )}
             </div>

@@ -13,11 +13,12 @@ type DashboardTab = 'profile' | 'listings' | 'saved' | 'appointments' | 'notific
 interface UserDashboardProps {
   initialTab?: DashboardTab;
   onNavigate?: (page: string) => void;
+  onAdminNavigate?: (tab: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts') => void;
   user?: UserProfile | null;
   onLogout?: () => void;
 }
 
-export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDashboardProps) {
+export function UserDashboard({ initialTab, onNavigate, onAdminNavigate, user, onLogout }: UserDashboardProps) {
   const [activeTab, setActiveTab] = useState<DashboardTab>(initialTab ?? 'profile');
   const [selectedNotification, setSelectedNotification] = useState<ApiNotification | null>(null);
   const [savedProperties, setSavedProperties] = useState<Property[]>([]);
@@ -148,6 +149,15 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
       await handleMarkRead(noti.id);
       noti = { ...noti, is_read: true };
     }
+    
+    if (noti.link && noti.link.startsWith('admin:')) {
+      const tab = noti.link.split(':')[1] as any;
+      if (onAdminNavigate) {
+        onAdminNavigate(tab);
+        return; // Close modal or don't open it if navigating
+      }
+    }
+    
     setSelectedNotification(noti);
   };
 
@@ -1072,9 +1082,17 @@ export function UserDashboard({ initialTab, onNavigate, user, onLogout }: UserDa
               {selectedNotification.link && (
                 <Button
                   className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => window.open(selectedNotification.link, '_blank')}
+                  onClick={() => {
+                    if (selectedNotification.link.startsWith('admin:')) {
+                      const tab = selectedNotification.link.split(':')[1] as any;
+                      onAdminNavigate?.(tab);
+                      setSelectedNotification(null);
+                    } else {
+                      window.open(selectedNotification.link, '_blank');
+                    }
+                  }}
                 >
-                  Mở liên kết
+                  {selectedNotification.link.startsWith('admin:') ? 'Đi đến trang quản trị' : 'Mở liên kết'}
                 </Button>
               )}
             </div>

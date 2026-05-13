@@ -165,14 +165,14 @@ export async function apiGetProperty(id: number): Promise<ApiProperty> {
   return request(`/properties/properties.php?id=${id}`);
 }
 
-export async function apiCreateProperty(data: Partial<ApiProperty>): Promise<{ message: string; id: number }> {
+export async function apiCreateProperty(data: Partial<ApiProperty> & { location_lat?: number; location_lng?: number }): Promise<{ message: string; id: number }> {
   return request('/properties/properties.php', {
     method: 'POST',
     body: JSON.stringify(data),
   });
 }
 
-export async function apiUpdateProperty(id: number, data: Partial<ApiProperty>): Promise<{ message: string }> {
+export async function apiUpdateProperty(id: number, data: Partial<ApiProperty> & { location_lat?: number; location_lng?: number }): Promise<{ message: string }> {
   return request(`/properties/properties.php?id=${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
@@ -574,3 +574,36 @@ export async function apiSendMessage(data: {
 export async function apiGetChatUnreadCount(): Promise<{ unread_count: number }> {
   return request('/messages/messages.php?action=unread_count');
 }
+
+// =============================================
+// Contacts API
+// =============================================
+export interface ApiContactMessage {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  topic: string;
+  message: string;
+  status: 'pending' | 'read' | 'replied';
+  created_at: string;
+}
+
+export async function apiSendContact(data: { name: string; email: string; phone?: string; topic?: string; message: string }): Promise<{ message: string; id: number }> {
+  return request('/contacts/contacts.php', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function apiGetContactsAdmin(): Promise<ApiContactMessage[]> {
+  return request('/contacts/contacts.php');
+}
+
+export async function apiUpdateContactStatus(id: number, status: string): Promise<{ message: string }> {
+  return request(`/contacts/contacts.php?id=${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+}
+

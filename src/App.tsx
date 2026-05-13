@@ -40,6 +40,8 @@ export default function App() {
   const [chatUnread, setChatUnread] = useState(0);
   const [chatDefaultReceiver, setChatDefaultReceiver] = useState<number | undefined>();
   const [savedPropertyIds, setSavedPropertyIds] = useState<number[]>([]);
+  const [adminInitialTab, setAdminInitialTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts'>('overview');
+
 
   // Auth modal state
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -258,6 +260,11 @@ export default function App() {
     setTimeout(() => {
       setNotifications(prev => prev.filter(n => n.id !== id));
     }, 5000);
+  };
+
+  const handleAdminNavigate = (tab: any) => {
+    setAdminInitialTab(tab);
+    setCurrentPage('admin');
   };
 
   const handlePropertyClick = (property: Property) => {
@@ -686,6 +693,7 @@ export default function App() {
                 {showComparison && (
                   <PropertyComparison 
                     properties={comparisonList}
+                    user={user}
                     onRemove={(id) => setComparisonList(comparisonList.filter(p => p.id !== id))}
                     onClose={() => setShowComparison(false)}
                   />
@@ -769,7 +777,7 @@ export default function App() {
         }
         return (
           <div className="max-w-[1440px] mx-auto px-4 py-12">
-            <UserDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
+            <UserDashboard onNavigate={setCurrentPage} onAdminNavigate={handleAdminNavigate} user={user} onLogout={handleLogout} />
           </div>
         );
       case 'agent-account':
@@ -782,7 +790,7 @@ export default function App() {
         }
         return (
           <div className="max-w-[1440px] mx-auto px-4 py-12">
-            <UserDashboard onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
+            <UserDashboard onNavigate={setCurrentPage} onAdminNavigate={handleAdminNavigate} user={user} onLogout={handleLogout} />
           </div>
         );
       case 'notifications':
@@ -795,7 +803,7 @@ export default function App() {
         }
         return (
           <div className="max-w-[1440px] mx-auto px-4 py-12">
-            <UserDashboard initialTab="notifications" onNavigate={setCurrentPage} user={user} onLogout={handleLogout} />
+            <UserDashboard initialTab="notifications" onNavigate={setCurrentPage} onAdminNavigate={handleAdminNavigate} user={user} onLogout={handleLogout} />
           </div>
         );
       case 'admin':
@@ -813,7 +821,7 @@ export default function App() {
         }
         return (
           <div className="max-w-[1440px] mx-auto px-4 py-12">
-            <AdminDashboard onNavigate={setCurrentPage} />
+            <AdminDashboard onNavigate={setCurrentPage} initialTab={adminInitialTab} />
           </div>
         );
       case 'admin-users':
@@ -898,7 +906,7 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      <AIChatbot />
+      {currentPage !== 'messages' && <AIChatbot />}
 
       <PropertyNotification 
         notifications={notifications} 

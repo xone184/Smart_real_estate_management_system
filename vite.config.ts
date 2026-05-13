@@ -20,13 +20,16 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modify—file watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      // Allow Codespaces *.app.github.dev domains
+      allowedHosts: true,
       proxy: {
         '/smart-real-estate-management-system/api': {
-          target: 'http://localhost',
+          // In Codespaces, Apache runs on port 80 inside the container
+          target: process.env.CODESPACES ? 'http://localhost:80' : 'http://localhost',
           changeOrigin: true,
         },
         '/smart-real-estate-management-system/uploads': {
-          target: 'http://localhost',
+          target: process.env.CODESPACES ? 'http://localhost:80' : 'http://localhost',
           changeOrigin: true,
         },
       },

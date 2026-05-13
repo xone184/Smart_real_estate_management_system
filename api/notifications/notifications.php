@@ -19,6 +19,10 @@ try {
     $userId = $_SESSION['user_id'];
     $db = getDB();
 
+    // Chạy kiểm tra hết hạn gói dịch vụ (Tự động hóa thay cho Cron job)
+    require_once __DIR__ . '/../subscriptions/expiration_checker.php';
+    checkSubscriptionExpirations($db);
+
     if ($method === 'GET') {
         $stmt = $db->prepare("
             SELECT * FROM notifications 

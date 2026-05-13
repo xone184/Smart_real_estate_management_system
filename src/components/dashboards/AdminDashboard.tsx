@@ -23,7 +23,11 @@ import {
   Sparkles,
   Download,
   X,
+  MessageSquare,
+  Mail,
+  Phone,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { cn } from '@/src/lib/utils';
 import {
   apiGetProperties,
@@ -35,8 +39,11 @@ import {
   apiUpdateSubscriptionStatus,
   AuthUser,
   ApiSubscription,
-  apiAdminExportReport,
   AdminReportEntity,
+  apiAdminExportReport,
+  ApiContactMessage,
+  apiGetContactsAdmin,
+  apiUpdateContactStatus,
 } from '../../services/api';
 import { Property, UserProfile } from '../../types';
 import { MarketDashboard } from './MarketDashboard';
@@ -74,17 +81,20 @@ const statusMeta: Record<string, { label: string; color: string; bg: string }> =
 // ─── Component ───────────────────────────────────────────────────────────────
 interface AdminDashboardProps {
   onNavigate?: (page: string) => void;
+  initialTab?: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts';
 }
 
-export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
+export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [subscriptions, setSubscriptions] = useState<ApiSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [subLoading, setSubLoading] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts'>(initialTab || 'overview');
   const [subFilter, setSubFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
+  const [contactMessages, setContactMessages] = useState<ApiContactMessage[]>([]);
+  const [contactLoading, setContactLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
   // Report/filter UI state
@@ -107,6 +117,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   const [selectedPropertyIds, setSelectedPropertyIds] = useState<number[]>([]);
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [viewingProperty, setViewingProperty] = useState<Property | null>(null);
+  const [viewingContact, setViewingContact] = useState<ApiContactMessage | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -122,14 +133,16 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   const fetchData = async () => {
     try {
-      const [propsData, usersData, subsData] = await Promise.all([
+      const [propsData, usersData, subsData, contactsData] = await Promise.all([
         apiGetProperties(),
         apiGetUsers(),
         apiAdminGetSubscriptions(),
+        apiGetContactsAdmin(),
       ]);
       setProperties(propsData as Property[]);
       setUsers(usersData as UserProfile[]);
       setSubscriptions(subsData);
+      setContactMessages(contactsData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -221,10 +234,25 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
     }
   };
 
-  // Lazy load subscriptions tab
+  const fetchContactMessages = async () => {
+    setContactLoading(true);
+    try {
+      const data = await apiGetContactsAdmin();
+      setContactMessages(data);
+    } catch (error) {
+      console.error('Error fetching contact messages:', error);
+    } finally {
+      setContactLoading(false);
+    }
+  };
+
+  // Lazy load tabs
   useEffect(() => {
     if (activeTab === 'subscriptions' && subscriptions.length === 0) {
       fetchSubscriptions();
+    }
+    if (activeTab === 'contacts' && contactMessages.length === 0) {
+      fetchContactMessages();
     }
   }, [activeTab]);
 
@@ -341,6 +369,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
   // ── Stats ─────────────────────────────────────────────────────────────────
   const pendingSubCount = subscriptions.filter(s => s.status === 'pending').length;
+  const pendingContactCount = contactMessages.filter(c => c.status === 'pending').length;
 
   const stats = [
     {
@@ -365,11 +394,11 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       bg: 'bg-purple-50',
     },
     {
-      label: 'Doanh thu tháng',
-      value: '1.2B',
-      trend: '-2%',
-      icon: <BarChart3 className="w-5 h-5 text-green-600" />,
-      bg: 'bg-green-50',
+      label: 'Liên hệ mới',
+      value: pendingContactCount.toString(),
+      trend: pendingContactCount > 0 ? `+${pendingContactCount}` : '0',
+      icon: <MessageSquare className="w-5 h-5 text-indigo-600" />,
+      bg: 'bg-indigo-50',
     },
   ];
 
@@ -671,6 +700,12 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             icon: <Package className="w-4 h-4" />,
             badge: pendingSubCount > 0 ? pendingSubCount : undefined,
           },
+          {
+            id: 'contacts',
+            label: 'Liên hệ',
+            icon: <MessageSquare className="w-4 h-4" />,
+            badge: pendingContactCount > 0 ? pendingContactCount : undefined,
+          },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -694,7 +729,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       {/* ── OVERVIEW TAB ──────────────────────────────────────────────────── */}
       {activeTab === 'overview' && (
         <div className="space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
             {stats.map((stat) => (
               <Card key={stat.label} className="border-none shadow-sm overflow-hidden">
                 <CardContent className="p-6">
@@ -1205,6 +1240,207 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               {filteredSubs.length > 0 && renderPagination(filteredSubs.length)}
             </CardContent>
           </Card>
+        </div>
+      )}
+      
+      {/* ── CONTACTS TAB ──────────────────────────────────────────────────── */}
+      {activeTab === 'contacts' && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+              Yêu cầu liên hệ từ khách hàng
+              {pendingContactCount > 0 && (
+                <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {pendingContactCount} mới
+                </span>
+              )}
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchContactMessages}
+              disabled={contactLoading}
+              className="rounded-xl"
+            >
+              {contactLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Làm mới'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {contactLoading ? (
+              <div className="flex items-center justify-center py-16 text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin mr-3" />
+                <span>Đang tải...</span>
+              </div>
+            ) : contactMessages.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-medium">Không có yêu cầu liên hệ nào</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {contactMessages.slice((currentPage - 1) * 15, currentPage * 15).map((msg) => (
+                  <div
+                    key={msg.id}
+                    className={cn(
+                      'p-5 rounded-2xl border transition-all',
+                      msg.status === 'pending'
+                        ? 'border-blue-100 bg-blue-50/30'
+                        : 'border-gray-100'
+                    )}
+                  >
+                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                      <div className="flex-grow">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-bold text-gray-900">{msg.name}</h4>
+                          {msg.status === 'pending' && (
+                            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Mới</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 mb-3">
+                          <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {msg.email}</span>
+                          {msg.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {msg.phone}</span>}
+                          <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {new Date(msg.created_at).toLocaleString('vi-VN')}</span>
+                        </div>
+                        <div className="bg-white/50 p-4 rounded-xl border border-gray-100/50">
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">Chủ đề: {msg.topic || 'Không xác định'}</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{msg.message}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl border-blue-200 text-blue-600 hover:bg-blue-50"
+                          onClick={() => setViewingContact(msg)}
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          Xem chi tiết
+                        </Button>
+                        {msg.status === 'pending' ? (
+                          <Button
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+                            onClick={async () => {
+                              await apiUpdateContactStatus(msg.id, 'read');
+                              fetchContactMessages();
+                            }}
+                          >
+                            Đánh dấu đã xem
+                          </Button>
+                        ) : (
+                          <span className="text-xs font-bold text-gray-400 uppercase px-3 py-1 bg-gray-100 rounded-full">
+                            Đã xem
+                          </span>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="rounded-xl border-gray-200"
+                          onClick={() => window.open(`mailto:${msg.email}?subject=Phản hồi từ SmartRE: ${msg.topic}`)}
+                        >
+                          Phản hồi Email
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {contactMessages.length > 0 && renderPagination(contactMessages.length)}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Contact Detail Modal */}
+      {viewingContact && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-2xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Chi tiết yêu cầu liên hệ</h3>
+                <p className="text-sm text-gray-500 mt-1">Gửi lúc: {new Date(viewingContact.created_at).toLocaleString('vi-VN')}</p>
+              </div>
+              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setViewingContact(null)}>
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-8 overflow-y-auto max-h-[70vh]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Khách hàng</p>
+                  <p className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-600" />
+                    {viewingContact.name}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trạng thái</p>
+                  <span className={cn(
+                    'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase',
+                    viewingContact.status === 'pending' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                  )}>
+                    {viewingContact.status === 'pending' ? 'Chờ xử lý' : 'Đã xem'}
+                  </span>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Email</p>
+                  <p className="text-gray-700 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    {viewingContact.email}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Số điện thoại</p>
+                  <p className="text-gray-700 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    {viewingContact.phone || 'Chưa cung cấp'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Chủ đề & Nội dung</p>
+                <div className="p-6 bg-gray-50 rounded-3xl border border-gray-100">
+                  <p className="font-bold text-gray-900 mb-3 text-lg">"{viewingContact.topic || 'Không có tiêu đề'}"</p>
+                  <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {viewingContact.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 border-t border-gray-100 flex gap-3 justify-end bg-gray-50/50">
+              <Button variant="outline" className="rounded-2xl px-6" onClick={() => setViewingContact(null)}>
+                Đóng
+              </Button>
+              {viewingContact.status === 'pending' && (
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white rounded-2xl px-6"
+                  onClick={async () => {
+                    await apiUpdateContactStatus(viewingContact.id, 'read');
+                    fetchContactMessages();
+                    setViewingContact({ ...viewingContact, status: 'read' });
+                  }}
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Đánh dấu đã xem
+                </Button>
+              )}
+              <Button
+                className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl px-6"
+                onClick={() => window.open(`mailto:${viewingContact.email}?subject=Phản hồi từ SmartRE: ${viewingContact.topic}`)}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Gửi Email phản hồi
+              </Button>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>

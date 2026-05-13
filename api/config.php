@@ -34,7 +34,11 @@ if ($corsOrigins = getenv('CORS_ORIGINS')) {
 
 // Handle CORS headers
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowedOrigins)) {
+
+// Auto-allow GitHub Codespaces domains
+$isCodespacesOrigin = preg_match('/^https:\/\/[a-z0-9\-]+\.app\.github\.dev$/', $origin);
+
+if (in_array($origin, $allowedOrigins) || $isCodespacesOrigin) {
     header('Access-Control-Allow-Origin: ' . $origin);
     header('Access-Control-Allow-Credentials: true');
 }

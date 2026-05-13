@@ -3,6 +3,8 @@ import { motion } from 'motion/react';
 import { Phone, Mail, MapPin, Clock, Send, MessageSquare, Building2, CheckCircle2, Facebook, Youtube, Linkedin } from 'lucide-react';
 import { Button } from '../shared/ui/Button';
 import { Card, CardContent } from '../shared/ui/Card';
+import { apiSendContact } from '../../services/api';
+
 
 interface ContactPageProps {
   onNavigate?: (page: string) => void;
@@ -58,16 +60,52 @@ export function ContactPage({ onNavigate }: ContactPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.email || !form.message) {
-      setError('Vui lòng điền đầy đủ thông tin bắt buộc');
+    setError('');
+
+    // Required fields check
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim()) {
+      setError('Vui lòng điền đầy đủ các thông tin bắt buộc (Họ tên, Email, Nội dung)');
       return;
     }
+
+    // Name validation
+    if (form.name.trim().length < 2) {
+      setError('Họ tên phải có ít nhất 2 ký tự');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError('Định dạng Email không hợp lệ');
+      return;
+    }
+
+    // Phone validation (optional field, but if provided should be valid)
+    if (form.phone.trim()) {
+      const phoneRegex = /^(0|84)(3|5|7|8|9)([0-9]{8})$/;
+      if (!phoneRegex.test(form.phone.trim().replace(/\s/g, ''))) {
+        setError('Số điện thoại không hợp lệ (Vui lòng dùng định dạng Việt Nam, ví dụ: 0901234567)');
+        return;
+      }
+    }
+
+    // Message length check
+    if (form.message.trim().length < 10) {
+      setError('Nội dung tin nhắn quá ngắn (vui lòng nhập ít nhất 10 ký tự)');
+      return;
+    }
+
     setSubmitting(true);
-    setError('');
-    // Simulate submit (có thể kết nối API email thực sau)
-    await new Promise(r => setTimeout(r, 1500));
-    setSubmitting(false);
-    setSubmitted(true);
+    
+    try {
+      await apiSendContact(form);
+      setSubmitted(true);
+    } catch (err: any) {
+      setError(err.message || 'Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

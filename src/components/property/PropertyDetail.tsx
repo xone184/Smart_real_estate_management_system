@@ -252,7 +252,7 @@ export function PropertyDetail({ property, onBack, onPropertyClick, similarPrope
               </CardContent>
             </Card>
 
-            <PropertyAmenities />
+            <PropertyAmenities location={property.location} address={property.address} />
 
             <PropertyFloorPlan />
 

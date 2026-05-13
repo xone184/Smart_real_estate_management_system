@@ -28,7 +28,92 @@ const amenities = [
   { icon: <Utensils className="w-5 h-5" />, label: "Khu ẩm thực", category: "Ngoại khu" },
 ];
 
-export function PropertyAmenities() {
+/**
+ * Replicate the same coordinate-validation logic used in PropertyMap
+ * so the Google Maps link always matches the pin shown on the system map.
+ */
+function useResolvedLocation(location?: { lat: number; lng: number }, address?: string) {
+  const [resolved, setResolved] = React.useState<{ lat: number; lng: number } | null>(null);
+
+  React.useEffect(() => {
+    let ignore = false;
+    const normalizedAddress = (address || '').toLowerCase();
+
+    const hasRawValidCoords =
+      location != null &&
+      Number.isFinite(location.lat) &&
+      Number.isFinite(location.lng) &&
+      Math.abs(location.lat) <= 90 &&
+      Math.abs(location.lng) <= 180 &&
+      !(location.lat === 0 && location.lng === 0);
+
+    const addressLooksHanoi =
+      normalizedAddress.includes('hà nội') ||
+      normalizedAddress.includes('ha noi') ||
+      normalizedAddress.includes('hn');
+    const addressLooksHcm =
+      normalizedAddress.includes('hồ chí minh') ||
+      normalizedAddress.includes('ho chi minh') ||
+      normalizedAddress.includes('tp.hcm') ||
+      normalizedAddress.includes('tp hcm') ||
+      normalizedAddress.includes('sài gòn') ||
+      normalizedAddress.includes('sai gon');
+
+    const coordsMatchAddressRegion =
+      !hasRawValidCoords
+        ? false
+        : addressLooksHanoi
+        ? location!.lat >= 19.5
+        : addressLooksHcm
+        ? location!.lat <= 12.5
+        : true;
+
+    const hasValidCoords = hasRawValidCoords && coordsMatchAddressRegion;
+
+    if (hasValidCoords) {
+      setResolved({ lat: location!.lat, lng: location!.lng });
+      return;
+    }
+
+    if (!address?.trim()) {
+      setResolved(null);
+      return;
+    }
+
+    // Geocode from address (same as PropertyMap)
+    const geocode = async () => {
+      try {
+        const q = encodeURIComponent(`${address}, Việt Nam`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`);
+        const data = await res.json();
+        if (!ignore && Array.isArray(data) && data[0]?.lat && data[0]?.lon) {
+          setResolved({ lat: Number(data[0].lat), lng: Number(data[0].lon) });
+        }
+      } catch {
+        // silently fail
+      }
+    };
+    geocode();
+
+    return () => { ignore = true; };
+  }, [location?.lat, location?.lng, address]);
+
+  return resolved;
+}
+
+export function PropertyAmenities({ location, address }: { location?: { lat: number; lng: number }, address?: string }) {
+  const resolvedLocation = useResolvedLocation(location, address);
+
+  const handleOpenMap = () => {
+    if (resolvedLocation) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${resolvedLocation.lat},${resolvedLocation.lng}`, '_blank');
+    } else if (address) {
+      window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`, '_blank');
+    } else {
+      window.open(`https://www.google.com/maps`, '_blank');
+    }
+  };
+
   return (
     <Card className="border-gray-50 shadow-sm">
       <CardHeader className="pb-2">
@@ -59,7 +144,10 @@ export function PropertyAmenities() {
             <p className="text-sm text-blue-100 mb-4 max-w-md leading-relaxed">
               Vị trí đắc địa giúp bạn dễ dàng kết nối với các bệnh viện, trường học quốc tế và trung tâm tài chính chỉ trong 10 phút di chuyển.
             </p>
-            <button className="flex items-center gap-2 text-sm font-bold bg-white text-blue-600 px-6 py-2.5 rounded-xl hover:bg-blue-50 transition-colors">
+            <button 
+              onClick={handleOpenMap}
+              className="flex items-center gap-2 text-sm font-bold bg-white text-blue-600 px-6 py-2.5 rounded-xl hover:bg-blue-50 transition-colors"
+            >
               Xem bản đồ chi tiết <ChevronRight className="w-4 h-4" />
             </button>
           </div>

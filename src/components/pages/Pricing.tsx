@@ -136,7 +136,7 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
               key={plan.name}
               className={cn(
                 'relative flex flex-col transition-all hover:shadow-xl',
-                plan.popular ? 'border-blue-200 shadow-blue-50 scale-105 z-10' : 'border-gray-100'
+                plan.popular ? 'border-blue-200 shadow-blue-50 scale-[1.02] z-10' : 'border-gray-100'
               )}
             >
               {plan.popular && (
@@ -182,7 +182,7 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
       {/* ── Registration / Payment Modal ── */}
       {selectedPlan && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden relative flex flex-col md:flex-row animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] overflow-hidden relative flex flex-col md:flex-row animate-in fade-in zoom-in duration-200">
             <button
               onClick={() => setSelectedPlan(null)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors z-10 bg-white/80 rounded-full p-1"
@@ -192,7 +192,7 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
 
             {/* Result screens */}
             {submitState === 'success' && (
-              <div className="w-full p-12 flex flex-col items-center justify-center text-center min-h-[400px]">
+              <div className="w-full p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
                   <CheckCircle2 className="w-10 h-10 text-green-600" />
                 </div>
@@ -208,7 +208,7 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
             )}
 
             {submitState === 'error' && (
-              <div className="w-full p-12 flex flex-col items-center justify-center text-center min-h-[400px]">
+              <div className="w-full p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
                 <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
                   <AlertCircle className="w-10 h-10 text-red-600" />
                 </div>
@@ -226,47 +226,42 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
             {(submitState === 'idle' || submitState === 'loading') && (
               <>
                 {/* Left - Plan Details */}
-                <div className="w-full md:w-5/12 bg-gray-50 p-8 border-r border-gray-100">
-                  <div className="mb-6 inline-flex items-center justify-center w-12 h-12 bg-white rounded-xl shadow-sm">
+                <div className="w-full md:w-5/12 bg-gray-50 p-6 border-r border-gray-100 overflow-y-auto">
+                  <div className="mb-3 inline-flex items-center justify-center w-10 h-10 bg-white rounded-xl shadow-sm">
                     {selectedPlan.icon}
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">Gói {selectedPlan.name}</h3>
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-3xl font-bold text-blue-600">{selectedPlan.price}</span>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">Gói {selectedPlan.name}</h3>
+                  <div className="flex items-baseline gap-1 mb-3">
+                    <span className="text-2xl font-bold text-blue-600">{selectedPlan.price}</span>
                     {selectedPlan.period && (
-                      <span className="text-gray-500 font-medium">{selectedPlan.period}</span>
+                      <span className="text-gray-500 font-medium text-xs">{selectedPlan.period}</span>
                     )}
                   </div>
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wider">Tính năng bao gồm:</h4>
-                    <ul className="space-y-3 pb-4">
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-900 text-[10px] uppercase tracking-wider">Tính năng:</h4>
+                    <ul className="space-y-2 pb-2">
                       {selectedPlan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-3 text-sm text-gray-700">
-                          <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                        <li key={idx} className="flex items-start gap-2 text-xs text-gray-700">
+                          <Check className="w-3.5 h-3.5 text-green-500 mt-0.5 flex-shrink-0" />
                           <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
                   </div>
                   {selectedPlan.id === 'professional' && (
-                    <div className="mt-4 bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700">
-                      ✅ Tài khoản sẽ được nâng cấp lên <strong>Môi giới chuyên nghiệp</strong> sau khi Admin xác nhận thanh toán.
-                    </div>
-                  )}
-                  {selectedPlan.id === 'enterprise' && (
-                    <div className="mt-4 bg-purple-50 border border-purple-100 rounded-xl p-3 text-xs text-purple-700">
-                      ✅ Tài khoản sẽ nhận toàn bộ quyền <strong>Doanh nghiệp</strong> sau khi được xét duyệt.
+                    <div className="mt-3 bg-blue-50 border border-blue-100 rounded-lg p-2 text-[10px] text-blue-700">
+                      ✅ Nâng cấp <strong>Môi giới chuyên nghiệp</strong> ngay.
                     </div>
                   )}
                 </div>
 
                 {/* Right - Form */}
-                <div className="w-full md:w-7/12 p-8 flex flex-col">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6">
+                <div className="w-full md:w-7/12 p-6 flex flex-col">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">
                     {selectedPlan.id === 'enterprise' ? 'Thông tin đăng ký' : 'Xác nhận & Thanh toán'}
                   </h3>
 
-                  <div className="space-y-4 mb-8 flex-grow overflow-y-auto">
+                  <div className="space-y-3 mb-6 flex-grow overflow-y-auto">
                     {/* Name */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Họ và tên</label>
@@ -328,14 +323,14 @@ export function Pricing({ user, onShowAuth }: PricingProps) {
                         </div>
 
                         {paymentMethod === 'qr_transfer' && (
-                          <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-center border border-gray-100">
+                          <div className="bg-gray-50 rounded-xl p-3 flex items-center justify-center border border-gray-100">
                             <div className="text-center">
                               <img
                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=SmartRE-${selectedPlan.name}-${selectedPlan.price}-${user?.id}`}
                                 alt="Payment QR"
-                                className="w-32 h-32 mx-auto mb-3 rounded-lg shadow-sm bg-white p-2"
+                                className="w-24 h-24 mx-auto mb-1.5 rounded-lg shadow-sm bg-white p-2"
                               />
-                              <p className="text-xs text-gray-500">
+                              <p className="text-[10px] text-gray-500">
                                 Quét mã QR bằng ứng dụng ngân hàng
                                 <br />
                                 Nội dung: <strong>SmartRE {selectedPlan.name} {user?.id}</strong>

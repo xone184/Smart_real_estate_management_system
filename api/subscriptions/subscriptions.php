@@ -256,26 +256,21 @@ function cancelSubscription(int $id): void {
 
 // ── Helper: Cung cấp dịch vụ cho user khi gói được duyệt ─────────────────────
 function activateUserPlan(PDO $db, int $user_id, string $plan_name): void {
-    // Tính ngày hết hạn: basic = vĩnh viễn, còn lại 30 ngày
+    // Tính ngày hết hạn
     $expires = null;
-    if ($plan_name !== 'basic') {
-        $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
+    $duration_days = 0;
+    if ($plan_name === 'professional') {
+        $duration_days = 30;
+        $expires = date('Y-m-d H:i:s', strtotime("+{$duration_days} days"));
+    } else if ($plan_name === 'enterprise') {
+        $duration_days = 365;
+        $expires = date('Y-m-d H:i:s', strtotime("+{$duration_days} days"));
     }
 
-    // Nâng cấp role:
-    //   - professional → agent (toàn quyền đăng tin không giới hạn, KYC ưu tiên)
-    //   - enterprise   → agent (quyền cao nhất trong hệ thống)
-    //   - basic        → giữ nguyên role hiện tại (user)
+    // Nâng cấp role
     $new_role_sql = '';
     if ($plan_name === 'professional' || $plan_name === 'enterprise') {
         $new_role_sql = ", role = 'agent'";
-    }
-
-    $column_exists_stmt = $db->query("SHOW COLUMNS FROM users LIKE 'subscription_plan'");
-    if ($column_exists_stmt->rowCount() === 0) {
-        // Cột chưa có, thêm vào (fallback an toàn)
-        $db->exec("ALTER TABLE users ADD COLUMN subscription_plan VARCHAR(50) DEFAULT 'basic'");
-        $db->exec("ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP NULL DEFAULT NULL");
     }
 
     $db->prepare("
@@ -285,4 +280,20 @@ function activateUserPlan(PDO $db, int $user_id, string $plan_name): void {
             {$new_role_sql}
         WHERE id = ?
     ")->execute([$plan_name, $expires, $user_id]);
+
+    // Gửi thông báo cho người dùng
+    $plan_label = 'Cơ bản';
+    if ($plan_name === 'professional') $plan_label = 'Chuyên nghiệp';
+    if ($plan_name === 'enterprise')   $plan_label = 'Doanh nghiệp';
+
+    $msg = "Chúc mừng! Gói dịch vụ \"{$plan_label}\" của bạn đã được kích hoạt thành công.";
+    if ($expires) {
+        $msg .= " Thời hạn sử dụng đến hết ngày " . date('d/m/Y', strtotime($expires)) . ".";
+    }
+
+    $stmtNoti = $db->prepare("
+        INSERT INTO notifications (user_id, title, message, type, link)
+        VALUES (?, ?, ?, 'success', 'profile:subscription')
+    ");
+    $stmtNoti->execute([$user_id, 'Kích hoạt dịch vụ thành công', $msg]);
 }

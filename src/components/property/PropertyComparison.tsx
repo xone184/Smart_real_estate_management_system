@@ -2,15 +2,17 @@ import React from 'react';
 import { Property } from '@/src/types';
 import { Card, CardContent, CardHeader, CardTitle } from '../shared/ui/Card';
 import { Button } from '../shared/ui/Button';
-import { X, Check, Minus, Square, Bed, Bath, Compass, FileText } from 'lucide-react';
+import { X, Square, Bed, Bath, Compass, FileText } from 'lucide-react';
+import { apiSendMessage } from '../../services/api';
 
 interface PropertyComparisonProps {
   properties: Property[];
   onRemove: (id: number) => void;
   onClose: () => void;
+  user?: any;
 }
 
-export function PropertyComparison({ properties, onRemove, onClose }: PropertyComparisonProps) {
+export function PropertyComparison({ properties, onRemove, onClose, user }: PropertyComparisonProps) {
   if (properties.length === 0) return null;
 
   const formatPrice = (price: number) => {
@@ -26,8 +28,50 @@ export function PropertyComparison({ properties, onRemove, onClose }: PropertyCo
     { key: 'bedrooms', label: 'Phòng ngủ', icon: <Bed className="w-4 h-4" />, format: (v: number) => v.toString() },
     { key: 'bathrooms', label: 'Phòng tắm', icon: <Bath className="w-4 h-4" />, format: (v: number) => v.toString() },
     { key: 'direction', label: 'Hướng', icon: <Compass className="w-4 h-4" />, format: (v: string) => v },
-    { key: 'legal', label: 'Pháp lý', icon: <FileText className="w-4 h-4" />, format: (v: string) => v === 'pink_book' ? 'Sổ hồng' : 'Sổ đỏ' },
+    { key: 'legal', label: 'Pháp lý', icon: <FileText className="w-4 h-4" />, format: (v: string) => v === 'pink_book' ? 'Sổ hồng' : (v === 'red_book' ? 'Sổ đỏ' : 'Đang cập nhật') },
   ];
+
+  const [loading, setLoading] = React.useState(false);
+
+  const handleContactAll = async () => {
+    if (!user) {
+      alert('Vui lòng đăng nhập để gửi tin nhắn liên hệ!');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // Lấy danh sách owner_id duy nhất và loại bỏ chính mình (nếu mình là chủ nhà)
+      const ownerIds = Array.from(new Set(properties.map(p => p.owner_id))).filter(id => id !== user.id);
+      
+      if (ownerIds.length === 0) {
+        alert('Không có chủ nhà nào khác để liên hệ!');
+        setLoading(false);
+        return;
+      }
+
+      // Gửi tin nhắn cho từng chủ nhà
+      const promises = ownerIds.map(ownerId => {
+        // Tìm các bất động sản của chủ nhà này trong danh sách so sánh
+        const propsOfOwner = properties.filter(p => p.owner_id === ownerId);
+        const propTitles = propsOfOwner.map(p => p.title).join(', ');
+        
+        return apiSendMessage({
+          receiver_id: ownerId,
+          content: `Chào bạn, tôi đang quan tâm đến các bất động sản của bạn trong danh sách so sánh: ${propTitles}. Vui lòng tư vấn thêm cho tôi thông tin chi tiết.`
+        });
+      });
+
+      await Promise.all(promises);
+      
+      alert('Yêu cầu liên hệ đã được gửi vào Messenger của tất cả người đăng!');
+      onClose();
+    } catch (error: any) {
+      alert('Có lỗi xảy ra khi gửi tin nhắn: ' + (error.message || 'Lỗi không xác định'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -99,7 +143,14 @@ export function PropertyComparison({ properties, onRemove, onClose }: PropertyCo
         
         <div className="p-6 bg-gray-50 border-t flex justify-end gap-4">
           <Button variant="outline" onClick={onClose} className="rounded-xl">Đóng</Button>
-          <Button variant="primary" className="rounded-xl bg-blue-600 hover:bg-blue-700">Liên hệ tất cả</Button>
+          <Button 
+            variant="primary" 
+            onClick={handleContactAll}
+            disabled={loading}
+            className="rounded-xl bg-blue-600 hover:bg-blue-700 min-w-[140px]"
+          >
+            {loading ? 'Đang gửi...' : 'Liên hệ tất cả'}
+          </Button>
         </div>
       </Card>
     </div>
