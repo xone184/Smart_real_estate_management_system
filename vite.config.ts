@@ -24,12 +24,12 @@ export default defineConfig(({mode}) => {
       allowedHosts: true,
       proxy: {
         '/smart-real-estate-management-system/api': {
-          // In Codespaces, Apache runs on port 80 inside the container
-          target: process.env.CODESPACES ? 'http://localhost:80' : 'http://localhost',
+          // In Codespaces, Apache runs on port 8080
+          target: process.env.CODESPACES ? 'http://localhost:8080' : 'http://localhost',
           changeOrigin: true,
         },
         '/smart-real-estate-management-system/uploads': {
-          target: process.env.CODESPACES ? 'http://localhost:80' : 'http://localhost',
+          target: process.env.CODESPACES ? 'http://localhost:8080' : 'http://localhost',
           changeOrigin: true,
         },
       },
