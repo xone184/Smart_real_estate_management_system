@@ -1,12 +1,7 @@
 {
   "name": "SmartRE",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-
-  "features": {
-    "ghcr.io/devcontainers/features/php:1": {
-      "version": "8.2",
-      "installComposer": true
-    }
+  "build": {
+    "dockerfile": "Dockerfile"
   },
 
   "forwardPorts": [3000, 8080],
@@ -21,8 +16,7 @@
     "vscode": {
       "extensions": [
         "bmewburn.vscode-intelephense-client",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode"
+        "dbaeumer.vscode-eslint"
       ]
     }
   }
