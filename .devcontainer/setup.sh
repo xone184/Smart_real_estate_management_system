@@ -5,10 +5,11 @@ echo "============================================="
 echo "  SmartRE - GitHub Codespaces Setup"
 echo "============================================="
 
-# ── 1. Install PHP dependencies ─────────────────────────────
-echo "📦 Installing PHP dependencies (Composer)..."
 cd /workspaces/Smart_real_estate_management_system
-composer install --no-interaction --prefer-dist 2>/dev/null || echo "⚠️  Composer install had warnings"
+
+# ── 1. Install PHP dependencies ─────────────────────────────
+echo "📦 Installing PHP dependencies..."
+composer install --no-interaction --prefer-dist 2>/dev/null || echo "⚠️  Composer install skipped"
 
 # ── 2. Install Node dependencies ─────────────────────────────
 echo "📦 Installing Node.js dependencies..."
@@ -38,68 +39,51 @@ ENVEOF
   echo "✅ .env created"
 fi
 
-# ── 4. Setup Apache ─────────────────────────────────────────
-echo "🔧 Configuring Apache..."
-# Create symlink so Apache serves the project at the right path
-sudo mkdir -p /var/www/html/smart-real-estate-management-system
-sudo rm -rf /var/www/html/smart-real-estate-management-system
-sudo ln -sf /workspaces/Smart_real_estate_management_system /var/www/html/smart-real-estate-management-system
+# ── 4. Setup MySQL ──────────────────────────────────────────
+echo "🗄️  Setting up MySQL..."
 
-# Enable Apache rewrite module
-sudo a2enmod rewrite 2>/dev/null || true
+# Start MySQL if not running
+sudo service mysql start 2>/dev/null || sudo mysqld_safe --skip-grant-tables &
+sleep 3
 
-# Configure Apache to allow .htaccess
-sudo tee /etc/apache2/conf-available/override.conf > /dev/null << 'APACHECONF'
-<Directory /var/www/html>
-    AllowOverride All
-    Require all granted
-</Directory>
-APACHECONF
-sudo a2enconf override 2>/dev/null || true
-
-# Change Apache port to 8080
-sudo sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf 2>/dev/null || true
-sudo sed -i 's/:80/:8080/' /etc/apache2/sites-enabled/000-default.conf 2>/dev/null || true
-
-# Restart Apache
-sudo service apache2 restart 2>/dev/null || true
-
-# ── 5. Import database ──────────────────────────────────────
-echo "🗄️  Setting up database..."
-
-# Wait for MySQL to be ready
-for i in {1..30}; do
-  if mysql -u root -e "SELECT 1" &>/dev/null; then
+# Wait for MySQL
+for i in {1..20}; do
+  if mysql -u root -e "SELECT 1" &>/dev/null 2>&1; then
+    echo "  MySQL is ready!"
     break
   fi
-  echo "  Waiting for MySQL... ($i/30)"
+  echo "  Waiting for MySQL... ($i/20)"
   sleep 2
 done
 
-mysql -u root -e "CREATE DATABASE IF NOT EXISTS smartre_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
+# Create database and import
+mysql -u root -e "CREATE DATABASE IF NOT EXISTS smartre_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
 
-# Check if tables exist
 TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='smartre_db';" 2>/dev/null || echo "0")
 
 if [ "$TABLE_COUNT" = "0" ] || [ -z "$TABLE_COUNT" ]; then
-  echo "  Importing smartre.sql..."
-  mysql -u root smartre_db < database/smartre.sql 2>/dev/null && echo "  ✅ Database imported!" || echo "  ⚠️  DB import had warnings"
+  echo "  Importing database..."
+  mysql -u root smartre_db < database/smartre.sql 2>/dev/null && echo "  ✅ Database imported!" || echo "  ⚠️  Import had warnings"
 else
-  echo "  Database already has $TABLE_COUNT tables, skipping import."
+  echo "  Database already has $TABLE_COUNT tables, skipping."
 fi
 
-# ── 6. Set permissions ───────────────────────────────────────
-echo "📂 Setting upload directory permissions..."
+# ── 5. Set permissions ───────────────────────────────────────
 mkdir -p uploads/properties uploads/users uploads/kyc
 chmod -R 777 uploads/
+
+# ── 6. Start PHP built-in server in background ───────────────
+echo "🚀 Starting PHP server on port 8080..."
+nohup php -S 0.0.0.0:8080 -t /workspaces/Smart_real_estate_management_system > /tmp/php-server.log 2>&1 &
+echo "  PHP server PID: $!"
 
 echo ""
 echo "============================================="
 echo "  ✅ Setup Complete!"
 echo "============================================="
 echo ""
-echo "  🌐 Frontend:  Run 'npm run dev' → port 3000"
-echo "  🔌 Backend:   Apache on port 8080"
+echo "  🌐 Frontend:  Run 'npm run dev'"
+echo "  🔌 PHP API:   Running on port 8080"
 echo ""
 echo "  📌 Demo accounts:"
 echo "     Admin:  admin@smartre.vn / 123456"

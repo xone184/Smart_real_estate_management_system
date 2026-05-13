@@ -1,18 +1,18 @@
 {
   "name": "SmartRE",
-  "image": "mcr.microsoft.com/devcontainers/php:8.2-apache",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
 
   "features": {
-    "ghcr.io/devcontainers/features/node:1": { "version": "20" },
-    "ghcr.io/robbert229/devcontainer-features/mysql-mariadb:1": {
-      "version": "10.11"
+    "ghcr.io/devcontainers/features/php:1": {
+      "version": "8.2",
+      "installComposer": true
     }
   },
 
   "forwardPorts": [3000, 8080],
   "portsAttributes": {
     "3000": { "label": "Vite Frontend", "onAutoForward": "openBrowser" },
-    "8080": { "label": "Apache PHP API", "onAutoForward": "silent" }
+    "8080": { "label": "PHP Server", "onAutoForward": "silent" }
   },
 
   "postCreateCommand": "bash .devcontainer/setup.sh",
@@ -22,8 +22,7 @@
       "extensions": [
         "bmewburn.vscode-intelephense-client",
         "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss"
+        "esbenp.prettier-vscode"
       ]
     }
   }
