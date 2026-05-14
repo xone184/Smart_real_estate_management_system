@@ -12,6 +12,19 @@ $method = getMethod();
 try {
     $db = getDB();
 
+    // Auto-create contacts table if it doesn't exist
+    $db->exec("CREATE TABLE IF NOT EXISTS `contacts` (
+      `id` int(11) NOT NULL AUTO_INCREMENT,
+      `name` varchar(255) NOT NULL,
+      `email` varchar(255) NOT NULL,
+      `phone` varchar(50) DEFAULT NULL,
+      `topic` varchar(255) DEFAULT NULL,
+      `message` text NOT NULL,
+      `status` enum('pending', 'read', 'replied') DEFAULT 'pending',
+      `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+      PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
     if ($method === 'POST') {
         $data = getRequestBody();
         
