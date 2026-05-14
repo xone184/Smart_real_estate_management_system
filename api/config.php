@@ -3,6 +3,19 @@
 // SmartRE API - Config & Database Connection
 // =============================================
 
+// Bật hiển thị lỗi để debug (hiển thị dưới dạng JSON)
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+set_exception_handler(function ($e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Internal Server Error: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], JSON_UNESCAPED_UNICODE);
+    exit();
+});
+set_error_handler(function ($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
 // Load environment variables
 $autoloadPath = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($autoloadPath)) {
