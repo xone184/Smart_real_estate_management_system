@@ -3,7 +3,7 @@
   "image": "mcr.microsoft.com/devcontainers/universal:2",
 
   "features": {
-    "./.devcontainer/features/fix-yarn-repo": {},
+    "./features/fix-yarn-repo": {},
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     }
