@@ -113,7 +113,7 @@ chmod -R 777 uploads/
 
 # ── 7. Start PHP server in background ─────────────────────────────────────
 echo "🚀 Starting PHP server on port 8080..."
-nohup php -S 0.0.0.0:8080 -t /workspaces/Smart_real_estate_management_system > /tmp/php-server.log 2>&1 &
+nohup /usr/bin/php -S 0.0.0.0:8080 -t /workspaces/Smart_real_estate_management_system > /tmp/php-server.log 2>&1 &
 echo "  PHP server PID: $!"
 
 echo ""
