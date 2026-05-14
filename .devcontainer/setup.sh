@@ -37,8 +37,9 @@ echo "🗄️  Installing MySQL..."
 sudo apt-get update -qq
 sudo apt-get install -y -qq mysql-server 2>/dev/null || echo "⚠️  MySQL install skipped"
 
-# ── 2. Install PHP dependencies (composer) ────────────────────────────────
+# ── 2. Install PHP dependencies ─────────────────────────────────────────────
 echo "📦 Installing PHP dependencies..."
+sudo apt-get install -y -qq php-mysql 2>/dev/null || echo "  ⚠️  php-mysql install skipped"
 # PHP is already available in the universal image at /home/codespace/.php/current/bin
 which php && echo "  PHP: $(php -v | head -1)" || echo "  ⚠️  PHP not found"
 composer install --no-interaction --prefer-dist 2>/dev/null || echo "  ⚠️  Composer install skipped"
