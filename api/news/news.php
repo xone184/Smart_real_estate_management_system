@@ -8,7 +8,7 @@
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 
-$cacheFile = sys_get_temp_dir() . '/smartre_news_cache.json';
+$cacheFile = sys_get_temp_dir() . '/smartre_news_cache_v2.json';
 $cacheTime = 600; // 10 minutes
 
 // 1. Kiểm tra cache
@@ -22,15 +22,19 @@ if (file_exists($cacheFile) && (time() - filemtime($cacheFile) < $cacheTime)) {
 
 // Hàm lấy dữ liệu vượt rào
 function fetch_content_safe($url) {
-    $context = stream_context_create([
-        'http' => [
-            'method' => 'GET',
-            'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36\r\n" .
-                        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n" .
-                        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7\r\n"
-        ]
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36");
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7"
     ]);
-    return @file_get_contents($url, false, $context);
+    $result = curl_exec($ch);
+    curl_close($ch);
+    return $result;
 }
 
 $newsList = [];
