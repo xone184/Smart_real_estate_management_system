@@ -1,6 +1,0 @@
-{
-  "id": "fix-yarn-repo",
-  "version": "1.0.0",
-  "name": "Fix Broken Yarn GPG Repository",
-  "description": "Removes the broken Yarn APT repository (expired GPG key NO_PUBKEY 62D54FD4003F6525) from the universal:2 image so that subsequent apt-get update calls succeed."
-}
