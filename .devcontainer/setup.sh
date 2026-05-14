@@ -7,6 +7,25 @@ echo "============================================="
 
 cd /workspaces/Smart_real_estate_management_system
 
+# ── Load nvm and Node.js into PATH ────────────────────────────────────────
+echo "🔧 Loading Node.js environment..."
+# Source the environment restore script (sets PATH for nvm, python, etc.)
+[ -f /etc/profile.d/00-restore-env.sh ] && source /etc/profile.d/00-restore-env.sh
+
+# Try multiple nvm locations
+export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+[ -s "/home/codespace/nvm/nvm.sh" ] && source "/home/codespace/nvm/nvm.sh"
+
+# Ensure nvm current is in PATH
+export PATH="/home/codespace/nvm/current/bin:/usr/local/share/nvm/current/bin:$PATH"
+
+# Verify
+which npm &>/dev/null && echo "  ✅ npm: $(npm -v)" || echo "  ⚠️  npm not found, trying nvm..."
+if ! which npm &>/dev/null; then
+  nvm use --lts 2>/dev/null || nvm use 20 2>/dev/null || true
+fi
+
 # ── 0. Fix broken Yarn APT repo (causes apt-get update to fail) ──────────
 echo "🔧 Fixing broken Yarn repository..."
 sudo rm -f /etc/apt/sources.list.d/yarn.list
