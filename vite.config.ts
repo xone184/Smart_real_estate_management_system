@@ -24,13 +24,15 @@ export default defineConfig(({mode}) => {
       allowedHosts: true,
       proxy: {
         '/smart-real-estate-management-system/api': {
-          // In Codespaces, Apache runs on port 8080
+          // In Codespaces, PHP runs on port 8080 at the root of the workspace
           target: process.env.CODESPACES ? 'http://localhost:8080' : 'http://localhost',
           changeOrigin: true,
+          rewrite: (path) => process.env.CODESPACES ? path.replace(/^\/smart-real-estate-management-system/, '') : path,
         },
         '/smart-real-estate-management-system/uploads': {
           target: process.env.CODESPACES ? 'http://localhost:8080' : 'http://localhost',
           changeOrigin: true,
+          rewrite: (path) => process.env.CODESPACES ? path.replace(/^\/smart-real-estate-management-system/, '') : path,
         },
       },
     },
