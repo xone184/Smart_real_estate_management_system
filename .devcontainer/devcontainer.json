@@ -1,14 +1,19 @@
 {
   "name": "SmartRE",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
 
   "features": {
+    "./.devcontainer/features/fix-yarn-repo": {},
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     }
   },
+
+  "overrideFeatureInstallOrder": [
+    "fix-yarn-repo",
+    "ghcr.io/devcontainers/features/node:1",
+    "ghcr.io/devcontainers/features/php:1"
+  ],
 
   "forwardPorts": [3000, 8080, 3306],
   "portsAttributes": {
