@@ -81,6 +81,10 @@ echo "🗄️  Setting up MySQL..."
 sudo service mysql start 2>/dev/null || true
 sleep 3
 
+# Fix socket permissions to prevent PHP "Permission denied" error
+sudo chmod 777 /var/run/mysqld 2>/dev/null || true
+sudo chmod 777 /var/run/mysqld/mysqld.sock 2>/dev/null || true
+
 # Wait for MySQL to be ready
 for i in {1..15}; do
   if sudo mysql -u root -e "SELECT 1" &>/dev/null 2>&1; then
