@@ -1,13 +1,25 @@
 {
   "name": "SmartRE",
-  "build": {
-    "dockerfile": "Dockerfile"
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/php:1": {
+      "version": "8.2",
+      "installComposer": true
+    },
+    "ghcr.io/devcontainers/features/mysql:1": {
+      "version": "8.0"
+    }
   },
 
-  "forwardPorts": [3000, 8080],
+  "forwardPorts": [3000, 8080, 3306],
   "portsAttributes": {
     "3000": { "label": "Vite Frontend", "onAutoForward": "openBrowser" },
-    "8080": { "label": "PHP Server", "onAutoForward": "silent" }
+    "8080": { "label": "PHP Server", "onAutoForward": "silent" },
+    "3306": { "label": "MySQL", "onAutoForward": "silent" }
   },
 
   "postCreateCommand": "bash .devcontainer/setup.sh",
