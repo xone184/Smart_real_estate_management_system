@@ -68,7 +68,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-SMTP_FROM_NAME=Smart Real Estate
+SMTP_FROM_NAME="Smart Real Estate"
 ENVEOF
   echo "  ✅ .env created"
 fi
