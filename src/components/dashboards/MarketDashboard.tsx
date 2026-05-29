@@ -119,16 +119,20 @@ export function MarketDashboard() {
     color: COLORS_MAP[t.type] || '#94a3b8',
   }));
 
-  // Chuẩn bị dữ liệu biểu đồ tháng
-  const monthData = s.by_month.map(m => ({
-    month: m.month.replace(/^\d{4}-/, 'T'),
-    count: m.count,
-  }));
-
-  // Nếu không có dữ liệu tháng, dùng fallback demo
-  const chartMonthData = monthData.length > 0 ? monthData : [
-    { month: 'T1', count: 2 }, { month: 'T2', count: 3 }, { month: 'T3', count: 5 },
-  ];
+  // Chuẩn bị dữ liệu biểu đồ tháng (6 tháng gần nhất)
+  const chartMonthData = [];
+  const today = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const yyyy_mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = `T${String(d.getMonth() + 1).padStart(2, '0')}`;
+    
+    const found = s.by_month?.find(m => m.month === yyyy_mm);
+    chartMonthData.push({
+      month: label,
+      count: found ? found.count : 0
+    });
+  }
 
   if (loading) {
     return (
