@@ -42,9 +42,29 @@ sudo apt-get install -y -qq mysql-server 2>/dev/null || echo "⚠️  MySQL inst
 
 # ── 2. Install PHP dependencies ─────────────────────────────────────────────
 echo "📦 Installing PHP dependencies..."
-sudo apt-get install -y -qq php-cli php-mysql 2>/dev/null || echo "  ⚠️  php-mysql install skipped"
-# PHP is already available in the universal image at /home/codespace/.php/current/bin
-which php && echo "  PHP: $(php -v | head -1)" || echo "  ⚠️  PHP not found"
+
+# Detect PHP binary and version
+PHP_BIN=$(which php 2>/dev/null || echo "/usr/bin/php")
+PHP_VER=$("$PHP_BIN" -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "")
+echo "  PHP binary : $PHP_BIN"
+echo "  PHP version: $PHP_VER"
+
+# Cài pdo_mysql đúng version (quan trọng!)
+if [ -n "$PHP_VER" ]; then
+  echo "  Installing php${PHP_VER}-mysql..."
+  sudo apt-get install -y -qq "php${PHP_VER}-mysql" 2>/dev/null && \
+    echo "  ✅ php${PHP_VER}-mysql installed" || \
+    echo "  ⚠️  php${PHP_VER}-mysql failed, trying generic..."
+fi
+sudo apt-get install -y -qq php-mysql 2>/dev/null || true
+
+# Verify pdo_mysql
+if "$PHP_BIN" -m 2>/dev/null | grep -qi pdo_mysql; then
+  echo "  ✅ pdo_mysql extension active"
+else
+  echo "  ⚠️  pdo_mysql not yet active (will retry in start-services.sh)"
+fi
+
 composer install --no-interaction --prefer-dist 2>/dev/null || echo "  ⚠️  Composer install skipped"
 
 # ── 3. Install Node.js dependencies ───────────────────────────────────────
