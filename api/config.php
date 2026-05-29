@@ -102,7 +102,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 header('Content-Type: application/json; charset=utf-8');
 
 // Handle preflight requests
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     // Flush buffer và thoát cho OPTIONS request
     while (ob_get_level() > 0) ob_end_flush();

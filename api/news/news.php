@@ -5,8 +5,7 @@
 // Cache lưu tạm thời 10 phút để tránh bị chặn IP
 // =============================================
 
-header("Access-Control-Allow-Origin: *");
-header("Content-Type: application/json; charset=UTF-8");
+require_once __DIR__ . '/../config.php';
 
 $cacheFile = sys_get_temp_dir() . '/smartre_news_cache_v2.json';
 $cacheTime = 600; // 10 minutes
@@ -45,7 +44,7 @@ $vneRaw = fetch_content_safe($vneUrl);
 
 if ($vneRaw) {
     try {
-        $xml = simplexml_load_string($vneRaw);
+        $xml = @simplexml_load_string($vneRaw);
         if ($xml && isset($xml->channel->item)) {
             $count = 0;
             foreach ($xml->channel->item as $item) {
@@ -74,7 +73,7 @@ $tnRaw = fetch_content_safe($tnUrl);
 
 if ($tnRaw) {
     try {
-        $xml = simplexml_load_string($tnRaw);
+        $xml = @simplexml_load_string($tnRaw);
         if ($xml && isset($xml->channel->item)) {
             $count = 0;
             foreach ($xml->channel->item as $item) {
