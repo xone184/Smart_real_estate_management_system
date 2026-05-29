@@ -256,14 +256,15 @@ export function PropertyDetail({ property, onBack, onPropertyClick, similarPrope
 
             <PropertyFloorPlan />
 
-            <PropertyVideo videoUrl={property.video_url} />
-
-            <PropertyReviews propertyId={property.id} user={user} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <PropertyVideo videoUrl={property.video_url} />
+              <PropertyReviews propertyId={property.id} user={user} />
+            </div>
           </div>
         </div>
 
         {/* Right Column: Contact & Valuation */}
-        <div className="space-y-6">
+        <div className="space-y-6 sticky top-24 h-fit">
           <PropertySchedule propertyId={property.id} user={user} />
           
           <PropertyAgent ownerId={property.owner_id} propertyId={property.id} property={property} />
