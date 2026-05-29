@@ -7,6 +7,9 @@
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
+// Thiết lập múi giờ Việt Nam
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 // Bắt fatal errors và luôn trả về JSON hợp lệ
 // QUAN TRỌNG: ob_start() PHẢI được gọi TRƯỚC khi đăng ký shutdown function
 // để shutdown function có thể dọn dẹp bất kỳ output ngoài ý muốn nào
@@ -141,6 +144,8 @@ function getDB(): PDO {
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
             ]);
+            // Set timezone for MySQL
+            $pdo->exec("SET time_zone = '+07:00';");
         } catch (PDOException $e) {
             jsonResponse(500, ['error' => 'Lỗi kết nối database: ' . $e->getMessage()]);
         }

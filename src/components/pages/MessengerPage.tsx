@@ -57,7 +57,13 @@ function Avatar({
 }
 
 function formatTime(ts: string) {
-  const d = new Date(ts);
+  // Ensure MySQL 'YYYY-MM-DD HH:MM:SS' is parsed correctly across all browsers
+  // Append +07:00 to explicitly tell JS this is Vietnam time
+  let safeTs = ts.replace(' ', 'T');
+  if (!safeTs.includes('+') && !safeTs.includes('Z')) {
+    safeTs += '+07:00';
+  }
+  const d = new Date(safeTs);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
   if (isToday) return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
