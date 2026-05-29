@@ -50,16 +50,20 @@ export function MarketDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  
+  // Date filters
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fromDate, toDate]);
 
   const fetchStats = async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiGetMarketStats();
+      const data = await apiGetMarketStats({ from: fromDate, to: toDate });
       setStats(data);
       setLastRefresh(new Date());
     } catch (err: any) {
@@ -119,22 +123,37 @@ export function MarketDashboard() {
     color: COLORS_MAP[t.type] || '#94a3b8',
   }));
 
-  // Chuẩn bị dữ liệu biểu đồ tháng (6 tháng gần nhất)
+  // Chuẩn bị dữ liệu biểu đồ tháng (6 tháng gần nhất nếu không có filter)
   const chartMonthData = [];
-  const today = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
-    const yyyy_mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    const label = `T${String(d.getMonth() + 1).padStart(2, '0')}`;
-    
-    const found = s.by_month?.find(m => m.month === yyyy_mm);
-    chartMonthData.push({
-      month: label,
-      count: found ? found.count : 0
+  
+  if (fromDate || toDate) {
+    // Nếu có filter date, thì dựa trên API trả về các tháng nào thì hiện tháng đó
+    // Khôi phục mảng tháng có trong dữ liệu
+    const sortedMonths = [...s.by_month].sort((a, b) => a.month.localeCompare(b.month));
+    sortedMonths.forEach(m => {
+      const parts = m.month.split('-');
+      chartMonthData.push({
+        month: `T${parts[1]}`,
+        count: m.count
+      });
     });
+  } else {
+    // Default 6 tháng
+    const today = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const yyyy_mm = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = `T${String(d.getMonth() + 1).padStart(2, '0')}`;
+      
+      const found = s.by_month?.find(m => m.month === yyyy_mm);
+      chartMonthData.push({
+        month: label,
+        count: found ? found.count : 0
+      });
+    }
   }
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -152,17 +171,43 @@ export function MarketDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Header with Refresh */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-gray-400">
-            Cập nhật lúc {lastRefresh.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-          </p>
+      {/* Header with Filters & Refresh */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Từ ngày</label>
+            <input 
+              type="date" 
+              value={fromDate} 
+              onChange={e => setFromDate(e.target.value)} 
+              className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Đến ngày</label>
+            <input 
+              type="date" 
+              value={toDate} 
+              onChange={e => setToDate(e.target.value)} 
+              className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="pt-5">
+            <Button variant="outline" size="sm" onClick={() => { setFromDate(''); setToDate(''); }} className="rounded-lg h-[34px]" disabled={!fromDate && !toDate}>
+              Xoá lọc
+            </Button>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchStats} className="rounded-xl gap-2">
-          <RefreshCw className="w-3.5 h-3.5" />
-          Làm mới
-        </Button>
+        
+        <div className="flex items-center gap-3 pt-5 md:pt-0">
+          <p className="text-xs text-gray-400 hidden lg:block">
+            Cập nhật: {lastRefresh.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+          </p>
+          <Button variant="outline" size="sm" onClick={fetchStats} className="rounded-xl gap-2" disabled={loading}>
+            <RefreshCw className={loading ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'} />
+            {loading ? 'Đang tải...' : 'Làm mới'}
+          </Button>
+        </div>
       </div>
 
       {error && (

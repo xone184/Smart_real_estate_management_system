@@ -439,42 +439,74 @@ function deleteProperty(int $id): void {
 function getMarketStats(): void {
     $db = getDB();
 
+    $whereProps = [];
+    $paramsProps = [];
+    $whereActive = ["status = 'active'"];
+    $paramsActive = [];
+
+    if (!empty($_GET['from'])) {
+        $whereProps[] = "created_at >= ?";
+        $paramsProps[] = $_GET['from'] . ' 00:00:00';
+        $whereActive[] = "created_at >= ?";
+        $paramsActive[] = $_GET['from'] . ' 00:00:00';
+    }
+    if (!empty($_GET['to'])) {
+        $whereProps[] = "created_at <= ?";
+        $paramsProps[] = $_GET['to'] . ' 23:59:59';
+        $whereActive[] = "created_at <= ?";
+        $paramsActive[] = $_GET['to'] . ' 23:59:59';
+    }
+
+    $wherePropsSql = count($whereProps) > 0 ? "WHERE " . implode(' AND ', $whereProps) : "";
+    $whereActiveSql = "WHERE " . implode(' AND ', $whereActive);
+
     // Tổng số BĐS
-    $totalStmt = $db->query("SELECT COUNT(*) as total, SUM(status='active') as total_active FROM properties");
+    $totalStmt = $db->prepare("SELECT COUNT(*) as total, SUM(status='active') as total_active FROM properties {$wherePropsSql}");
+    $totalStmt->execute($paramsProps);
     $totals = $totalStmt->fetch();
 
     // Giá trung bình BĐS active
-    $avgStmt = $db->query("SELECT AVG(price) as avg_price FROM properties WHERE status = 'active'");
+    $avgStmt = $db->prepare("SELECT AVG(price) as avg_price FROM properties {$whereActiveSql}");
+    $avgStmt->execute($paramsActive);
     $avgPrice = (float) ($avgStmt->fetchColumn() ?? 0);
 
     // Phân loại theo type
-    $typeStmt = $db->query("
+    $typeStmt = $db->prepare("
         SELECT type, COUNT(*) as count, COALESCE(AVG(price), 0) as avg_price
         FROM properties
-        WHERE status = 'active'
+        {$whereActiveSql}
         GROUP BY type
         ORDER BY count DESC
     ");
+    $typeStmt->execute($paramsActive);
     $byType = $typeStmt->fetchAll();
     foreach ($byType as &$t) {
         $t['count'] = (int) $t['count'];
         $t['avg_price'] = (float) $t['avg_price'];
     }
 
-    // Số tin đăng theo tháng (12 tháng gần nhất)
-    $monthStmt = $db->query("
+    // Số tin đăng theo tháng
+    $monthWhere = $whereProps;
+    $monthParams = $paramsProps;
+    if (empty($_GET['from']) && empty($_GET['to'])) {
+        $monthWhere[] = "created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)";
+    }
+    $monthWhereSql = count($monthWhere) > 0 ? "WHERE " . implode(' AND ', $monthWhere) : "";
+
+    $monthStmt = $db->prepare("
         SELECT DATE_FORMAT(created_at, '%Y-%m') as month, COUNT(*) as count
         FROM properties
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+        {$monthWhereSql}
         GROUP BY month
         ORDER BY month ASC
     ");
+    $monthStmt->execute($monthParams);
     $byMonth = $monthStmt->fetchAll();
     foreach ($byMonth as &$m) {
         $m['count'] = (int) $m['count'];
     }
 
-    // Tổng users
+    // Tổng users (không filter theo from/to vì đây là tổng số tài khoản)
     $userStmt = $db->query("SELECT COUNT(*) as total_users FROM users");
     $totalUsers = (int) $userStmt->fetchColumn();
 

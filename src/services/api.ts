@@ -431,8 +431,12 @@ export interface MarketStats {
   by_month: { month: string; count: number }[];
 }
 
-export async function apiGetMarketStats(): Promise<MarketStats> {
-  return request('/properties/properties.php?action=market_stats');
+export async function apiGetMarketStats(params?: { from?: string; to?: string }): Promise<MarketStats> {
+  const qs = new URLSearchParams();
+  qs.set('action', 'market_stats');
+  if (params?.from) qs.set('from', params.from);
+  if (params?.to) qs.set('to', params.to);
+  return request(`/properties/properties.php?${qs.toString()}`);
 }
 
 // =============================================
