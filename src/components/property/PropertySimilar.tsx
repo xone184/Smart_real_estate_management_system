@@ -5,7 +5,7 @@ import { Bed, Bath, Square, MapPin, ChevronRight, ChevronLeft, Sparkles } from '
 import { motion, AnimatePresence } from 'motion/react';
 
 const ITEMS_PER_PAGE = 6;
-const AUTO_ADVANCE_MS = 20_000;
+const AUTO_ADVANCE_MS = 10_000;
 
 interface PropertySimilarProps {
   properties: Property[];
@@ -187,50 +187,6 @@ export function PropertySimilar({ properties, onPropertyClick }: PropertySimilar
         </AnimatePresence>
       </div>
 
-      {/* Bottom pagination controls */}
-      {totalPages > 1 && (
-        <div className="flex flex-col items-center gap-3 pt-2">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={prevPage}
-              className="p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
-              aria-label="Trang trước"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-
-            {/* Page numbers */}
-            <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  onClick={() => goToPage(i)}
-                  className={`min-w-[36px] h-9 rounded-lg text-sm font-bold transition-all ${
-                    i === currentPage
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
-                      : 'bg-white text-gray-500 border border-gray-200 hover:bg-blue-50 hover:text-blue-600'
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
-            </div>
-
-            <button
-              onClick={nextPage}
-              className="p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-all shadow-sm"
-              aria-label="Trang sau"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
-
-          <p className="text-xs text-gray-400 font-medium">
-            Trang {currentPage + 1} / {totalPages} · {properties.length} bất động sản tương tự
-            {isPaused && <span className="ml-2 text-blue-500">(đã tạm dừng)</span>}
-          </p>
-        </div>
-      )}
     </div>
   );
 }
