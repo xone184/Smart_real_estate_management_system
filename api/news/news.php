@@ -39,60 +39,58 @@ function fetch_content_safe($url) {
 
 $newsList = [];
 
-// 2. Lấy dữ liệu Google News
-$gnUrl = "https://news.google.com/rss/search?q=bất+động+sản+Hà+Nội+OR+nhà+đất+Hà+Nội&hl=vi&gl=VN&ceid=VN:vi";
-$gnRaw = fetch_content_safe($gnUrl);
+// 2. Lấy dữ liệu VietnamNet
+$vneUrl = "https://vietnamnet.vn/rss/bat-dong-san.rss";
+$vneRaw = fetch_content_safe($vneUrl);
 
-if ($gnRaw) {
+if ($vneRaw) {
     try {
-        $xml = simplexml_load_string($gnRaw);
+        $xml = simplexml_load_string($vneRaw);
         if ($xml && isset($xml->channel->item)) {
             $count = 0;
             foreach ($xml->channel->item as $item) {
-                if ($count++ >= 15) break; 
+                if ($count++ >= 10) break; 
+                
+                $desc = (string)$item->description;
+                $snippet = strip_tags($desc);
+                
                 $newsList[] = [
-                    'id' => 'gn_' . md5((string)$item->link),
+                    'id' => 'vnn_' . md5((string)$item->link),
                     'title' => (string)$item->title,
                     'link' => (string)$item->link,
-                    'snippet' => strip_tags((string)$item->description), // Đơn giản hóa HTML
-                    'source' => 'google_news',
-                    'author' => (string)$item->source,
-                    'timestamp' => strtotime((string)$item->pubDate) * 1000 // Chuyển sang ms dùng trong JS
+                    'snippet' => $snippet,
+                    'source' => 'google_news', // Keep this as google_news to avoid breaking frontend icon mapping
+                    'author' => 'VietnamNet',
+                    'timestamp' => strtotime((string)$item->pubDate) * 1000
                 ];
             }
         }
-    } catch (Exception $e) { /* Lỗi parse XML -> bỏ qua */ }
+    } catch (Exception $e) { /* Lỗi parse XML */ }
 }
 
-// 3. Lấy dữ liệu Reddit
-$rdUrl = "https://www.reddit.com/search.rss?q=hanoi+real+estate+OR+bất+động+sản+hà+nội&sort=new&limit=10";
-$rdRaw = fetch_content_safe($rdUrl);
+// 3. Lấy dữ liệu Thanh Niên
+$tnUrl = "https://thanhnien.vn/rss/kinh-te/dia-oc.rss";
+$tnRaw = fetch_content_safe($tnUrl);
 
-if ($rdRaw) {
+if ($tnRaw) {
     try {
-        $xml = simplexml_load_string($rdRaw);
-        // Reddit trả về dạng Atom feed thay vì RSS 2.0
-        if ($xml && isset($xml->entry)) {
+        $xml = simplexml_load_string($tnRaw);
+        if ($xml && isset($xml->channel->item)) {
             $count = 0;
-            foreach ($xml->entry as $entry) {
+            foreach ($xml->channel->item as $item) {
                 if ($count++ >= 10) break;
-                // Parse tác giả từ chuỗi /u/ABC
-                $author = isset($entry->author->name) ? (string)$entry->author->name : 'Reddit User';
-                $snippet = '';
-                if(isset($entry->content)) {
-                    // Extract a short sensible snippet from Reddit HTML chaos
-                    $snippet = strip_tags(html_entity_decode((string)$entry->content));
-                    $snippet = substr($snippet, 0, 150) . (strlen($snippet) > 150 ? '...' : '');
-                }
+                
+                $desc = (string)$item->description;
+                $snippet = strip_tags($desc);
 
                 $newsList[] = [
-                    'id' => 'rd_' . md5((string)$entry->link['href']),
-                    'title' => (string)$entry->title,
-                    'link' => (string)$entry->link['href'],
+                    'id' => 'tn_' . md5((string)$item->link),
+                    'title' => (string)$item->title,
+                    'link' => (string)$item->link,
                     'snippet' => $snippet,
-                    'source' => 'reddit',
-                    'author' => $author,
-                    'timestamp' => strtotime((string)$entry->updated) * 1000
+                    'source' => 'reddit', // Keep this as 'reddit' for icon compatibility, or the frontend won't show an icon.
+                    'author' => 'Thanh Niên',
+                    'timestamp' => strtotime((string)$item->pubDate) * 1000
                 ];
             }
         }
