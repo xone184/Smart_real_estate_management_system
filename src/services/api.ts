@@ -15,10 +15,22 @@ async function request<T>(url: string, options: RequestInit = {}): Promise<T> {
     },
   });
 
-  const data = await response.json();
+  // Đọc text trước để tránh crash khi response rỗng (500 từ PHP)
+  const text = await response.text();
+
+  let data: any;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    // PHP server trả về HTML error hoặc body rỗng — wrap lại thành error rõ ràng
+    throw new Error(
+      `Server responded with status ${response.status} but returned invalid JSON.` +
+      (text ? ` Preview: ${text.slice(0, 200)}` : ' (empty body)')
+    );
+  }
 
   if (!response.ok) {
-    throw new Error(data.error || 'Có lỗi xảy ra');
+    throw new Error(data?.error || `Request failed with status ${response.status}`);
   }
 
   return data;

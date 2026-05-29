@@ -7,10 +7,16 @@
     "8080": { "label": "PHP Server", "onAutoForward": "silent" },
     "3306": { "label": "MySQL", "onAutoForward": "silent" }
   },
+  "remoteEnv": {
+    "CODESPACES": "true",
+    "VITE_CODESPACES": "true"
+  },
   "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start-services.sh",
   "customizations": {
     "vscode": {
       "extensions": ["bmewburn.vscode-intelephense-client", "dbaeumer.vscode-eslint"]
     }
   }
 }
+

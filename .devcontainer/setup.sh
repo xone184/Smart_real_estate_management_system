@@ -5,6 +5,9 @@ echo "============================================="
 echo "  SmartRE - GitHub Codespaces Setup"
 echo "============================================="
 
+# Codespaces environment flag (used by Vite proxy config)
+export CODESPACES=true
+
 cd /workspaces/Smart_real_estate_management_system
 
 # ── Load nvm and Node.js into PATH ────────────────────────────────────────
@@ -64,6 +67,9 @@ DB_USER=root
 DB_PASS=
 DB_NAME=smartre_db
 CORS_ORIGINS=http://localhost:3000,http://localhost:8080
+VITE_CODESPACES=true
+VITE_API_BASE_URL=/smart-real-estate-management-system/api
+VITE_UPLOAD_BASE_URL=/smart-real-estate-management-system/uploads
 GEMINI_API_KEY=
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -115,10 +121,9 @@ fi
 mkdir -p uploads/properties uploads/users uploads/kyc
 chmod -R 777 uploads/
 
-# ── 7. Start PHP server in background ─────────────────────────────────────
-echo "🚀 Starting PHP server on port 8080..."
-nohup /usr/bin/php -S 0.0.0.0:8080 -t /workspaces/Smart_real_estate_management_system > /tmp/php-server.log 2>&1 &
-echo "  PHP server PID: $!"
+# ── 7. Start all services (MySQL + PHP) via shared startup script ──────────
+echo "🚀 Starting services..."
+bash .devcontainer/start-services.sh
 
 echo ""
 echo "============================================="
@@ -129,7 +134,8 @@ echo "  🌐 Frontend:  Run 'npm run dev'"
 echo "  🔌 PHP API:   Running on port 8080"
 echo ""
 echo "  📌 Demo accounts:"
-echo "     Admin:  admin@smartre.vn / 123456"
-echo "     User:   user@smartre.vn  / 123456"
-echo "     Agent:  agent@smartre.vn / 123456"
+echo "     Admin:  admin@smartre.vn / admin123"
+echo "     User:   user@smartre.vn  / user123"
+echo "     Agent:  agent@smartre.vn / agent123"
 echo ""
+

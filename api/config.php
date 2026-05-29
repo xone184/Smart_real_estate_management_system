@@ -3,15 +3,49 @@
 // SmartRE API - Config & Database Connection
 // =============================================
 
-// Bật hiển thị lỗi để debug (hiển thị dưới dạng JSON)
+// Tắt hiển thị lỗi trực tiếp (tránh làm hỏng JSON output)
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
+
+// Bắt fatal errors và luôn trả về JSON hợp lệ
+// QUAN TRỌNG: ob_start() PHẢI được gọi TRƯỚC khi đăng ký shutdown function
+// để shutdown function có thể dọn dẹp bất kỳ output ngoài ý muốn nào
+ob_start();
+
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        // Xóa mọi output đã được buffer (HTML error page của PHP, v.v.)
+        while (ob_get_level() > 0) ob_end_clean();
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+        }
+        echo json_encode([
+            'error' => 'Fatal Server Error: ' . $error['message'],
+            'file'  => basename($error['file']),
+            'line'  => $error['line'],
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        // Không có lỗi - flush buffer bình thường
+        if (ob_get_level() > 0) ob_end_flush();
+    }
+});
+
 set_exception_handler(function ($e) {
-    http_response_code(500);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['error' => 'Internal Server Error: ' . $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], JSON_UNESCAPED_UNICODE);
+    while (ob_get_level() > 0) ob_end_clean();
+    if (!headers_sent()) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode([
+        'error' => 'Internal Server Error: ' . $e->getMessage(),
+        'file'  => basename($e->getFile()),
+        'line'  => $e->getLine(),
+    ], JSON_UNESCAPED_UNICODE);
     exit();
 });
+
 set_error_handler(function ($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
@@ -49,9 +83,13 @@ if ($corsOrigins = getenv('CORS_ORIGINS')) {
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 
 // Auto-allow GitHub Codespaces domains
-$isCodespacesOrigin = preg_match('/^https:\/\/[a-z0-9\-]+\.app\.github\.dev$/', $origin);
+// Matches: https://xxx-3000.app.github.dev  (any subdomain of app.github.dev)
+$isCodespacesOrigin = (bool) preg_match('/^https:\/\/[a-z0-9][a-z0-9\-]*\.app\.github\.dev$/', $origin);
 
-if (in_array($origin, $allowedOrigins) || $isCodespacesOrigin) {
+// Also allow localhost on any port (for local dev)
+$isLocalhostOrigin = (bool) preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin);
+
+if (in_array($origin, $allowedOrigins) || $isCodespacesOrigin || $isLocalhostOrigin) {
     header('Access-Control-Allow-Origin: ' . $origin);
     header('Access-Control-Allow-Credentials: true');
 }
@@ -63,6 +101,8 @@ header('Content-Type: application/json; charset=utf-8');
 // Handle preflight requests
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
+    // Flush buffer và thoát cho OPTIONS request
+    while (ob_get_level() > 0) ob_end_flush();
     exit();
 }
 
@@ -109,8 +149,12 @@ function getDB(): PDO {
 }
 
 // Helper: JSON response
+// QUAN TRỌNG: Phải flush ob_start() buffer trước khi exit()
 function jsonResponse(int $code, $data): void {
+    // Xóa buffer (loại bỏ bất kỳ output ngoài ý muốn nào, giữ lại headers)
+    while (ob_get_level() > 0) ob_end_clean();
     http_response_code($code);
+    header('Content-Type: application/json; charset=utf-8');
     echo json_encode($data, JSON_UNESCAPED_UNICODE);
     exit();
 }
