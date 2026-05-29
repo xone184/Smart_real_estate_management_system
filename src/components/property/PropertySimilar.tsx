@@ -5,7 +5,7 @@ import { Bed, Bath, Square, MapPin, ChevronRight, ChevronLeft, Sparkles } from '
 import { motion, AnimatePresence } from 'motion/react';
 
 const ITEMS_PER_PAGE = 6;
-const AUTO_ADVANCE_MS = 10_000;
+const AUTO_ADVANCE_MS = 5_000;
 
 interface PropertySimilarProps {
   properties: Property[];
