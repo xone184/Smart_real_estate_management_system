@@ -15,6 +15,18 @@ $info = [
     'document_root'   => $_SERVER['DOCUMENT_ROOT'] ?? 'unknown',
 ];
 
+// Check which system PHP binaries have pdo_mysql
+$phpCandidates = ['/usr/bin/php8.3','/usr/bin/php8.2','/usr/bin/php8.1','/usr/bin/php'];
+$phpBinaryInfo = [];
+foreach ($phpCandidates as $bin) {
+    if (file_exists($bin)) {
+        $ver = shell_exec("$bin -r 'echo PHP_VERSION;' 2>/dev/null") ?? '';
+        $hasMysql = (bool) shell_exec("$bin -m 2>/dev/null | grep -i pdo_mysql");
+        $phpBinaryInfo[$bin] = ['version' => trim($ver), 'pdo_mysql' => $hasMysql];
+    }
+}
+$info['system_php_binaries'] = $phpBinaryInfo;
+
 // PHP ini info
 $info['php_ini'] = [
     'loaded_file'   => php_ini_loaded_file() ?: '(none)',

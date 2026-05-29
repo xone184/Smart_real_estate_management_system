@@ -16,36 +16,79 @@ export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
 [ -s "/home/codespace/nvm/nvm.sh" ] && source "/home/codespace/nvm/nvm.sh"
 export PATH="/home/codespace/nvm/current/bin:/usr/local/share/nvm/current/bin:$PATH"
 
-# ── 1. PHP binary detection ────────────────────────────────────────────────
-PHP_BIN=$(which php 2>/dev/null || echo "/usr/bin/php")
-PHP_VER=$("$PHP_BIN" -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "")
-PHP_API=$("$PHP_BIN" -r "echo PHP_ZEND_MODULE_API_NO;" 2>/dev/null || echo "")
-echo "  PHP binary : $PHP_BIN"
-echo "  PHP version: $PHP_VER  (API: $PHP_API)"
+# ──────────────────────────────────────────────────────────────────────────
+# STRATEGY: The Codespaces PHP shim (which php) uses a custom extension_dir
+# that does NOT include apt-installed extensions like pdo_mysql.
+# Solution: Install system PHP (php8.3-cli + php8.3-mysql) via apt,
+# then use /usr/bin/php8.3 which has proper extension integration.
+# ──────────────────────────────────────────────────────────────────────────
 
-# ── 2. Install pdo_mysql via apt ───────────────────────────────────────────
-echo "📦 Ensuring pdo_mysql extension..."
+# ── 1. Install system PHP with MySQL support ───────────────────────────────
+echo "📦 Installing system PHP with pdo_mysql..."
 
-if "$PHP_BIN" -m 2>/dev/null | grep -qi "pdo_mysql"; then
-  echo "  ✅ pdo_mysql already loaded"
-  PDO_MYSQL_READY=true
+# Detect current PHP version to target the right package
+CODESPACE_PHP=$(which php 2>/dev/null || echo "php")
+DETECTED_VER=$("$CODESPACE_PHP" -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;" 2>/dev/null || echo "8.3")
+echo "  Detected Codespaces PHP version: $DETECTED_VER"
+
+# Install system PHP packages (these install to /usr/bin/phpX.Y)
+echo "  Installing php${DETECTED_VER}-cli php${DETECTED_VER}-mysql..."
+sudo apt-get install -y -qq \
+  "php${DETECTED_VER}-cli" \
+  "php${DETECTED_VER}-mysql" \
+  "php${DETECTED_VER}-mbstring" \
+  "php${DETECTED_VER}-xml" \
+  "php${DETECTED_VER}-curl" \
+  2>/dev/null || true
+
+# ── 2. Find a PHP binary that actually has pdo_mysql ──────────────────────
+echo "🔍 Finding PHP binary with pdo_mysql..."
+
+find_php_with_mysql() {
+  # Prefer system PHP matching the detected version
+  local candidates=(
+    "/usr/bin/php${DETECTED_VER}"
+    "/usr/bin/php8.3"
+    "/usr/bin/php8.2"
+    "/usr/bin/php8.1"
+    "/usr/bin/php8.0"
+    "/usr/local/bin/php"
+    "/usr/bin/php"
+  )
+  for phpbin in "${candidates[@]}"; do
+    if [ -x "$phpbin" ] && "$phpbin" -m 2>/dev/null | grep -qi "pdo_mysql"; then
+      echo "$phpbin"
+      return 0
+    fi
+  done
+  return 1
+}
+
+PHP_BIN=$(find_php_with_mysql)
+
+if [ -n "$PHP_BIN" ]; then
+  echo "  ✅ Found PHP with pdo_mysql: $PHP_BIN"
+  echo "     Version: $($PHP_BIN -r 'echo PHP_VERSION;' 2>/dev/null)"
 else
-  echo "  Installing php${PHP_VER}-mysql via apt..."
-  sudo apt-get install -y -qq "php${PHP_VER}-mysql" 2>/dev/null || true
-  sudo apt-get install -y -qq php-mysql php-dev 2>/dev/null || true
+  echo "  ⚠️  No PHP with pdo_mysql found — trying fallback with -d extension..."
 
-  # Tìm pdo_mysql.so ở BẤT KỲ đâu trong hệ thống
+  # Fallback: find the .so file and load it explicitly
   PDO_SO=$(find /usr/lib/php -name "pdo_mysql.so" 2>/dev/null | head -1)
-  if [ -z "$PDO_SO" ]; then
-    PDO_SO=$(find /usr -name "pdo_mysql.so" 2>/dev/null | head -1)
-  fi
+  PHP_BIN=$(which php 2>/dev/null || echo "/usr/bin/php")
 
   if [ -n "$PDO_SO" ]; then
-    echo "  ✅ Found pdo_mysql.so at: $PDO_SO"
-    PDO_MYSQL_READY=true
+    echo "  Found .so at: $PDO_SO"
+    # Test if -d extension works
+    if "$PHP_BIN" -d "extension=$PDO_SO" -r "echo 'ok';" 2>/dev/null | grep -q ok; then
+      # Wrap the command to always include -d extension
+      # We'll export a variable and use it when starting the server
+      EXTRA_PHP_ARGS="-d extension=$PDO_SO"
+      echo "  ✅ Will use: $PHP_BIN $EXTRA_PHP_ARGS"
+    fi
   else
-    echo "  ❌ pdo_mysql.so not found anywhere after apt install"
-    PDO_MYSQL_READY=false
+    echo "  ❌ pdo_mysql.so not found — DB will fail"
+    PHP_BIN=$(which php 2>/dev/null || echo "/usr/bin/php")
+    EXTRA_PHP_ARGS=""
   fi
 fi
 
@@ -72,8 +115,7 @@ if [ "$MYSQL_READY" = true ]; then
   sudo mysql -u root -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY ''; FLUSH PRIVILEGES;" 2>/dev/null || true
   sudo mysql -u root -e "CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED WITH mysql_native_password BY ''; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1' WITH GRANT OPTION; FLUSH PRIVILEGES;" 2>/dev/null || true
 
-  TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='smartre_db';" 2>/dev/null || echo "0")
-  TABLE_COUNT=$(echo "$TABLE_COUNT" | tr -d '[:space:]')
+  TABLE_COUNT=$(mysql -u root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='smartre_db';" 2>/dev/null | tr -d '[:space:]')
   if [ "$TABLE_COUNT" = "0" ] || [ -z "$TABLE_COUNT" ]; then
     echo "  📦 Importing database schema..."
     mysql -u root smartre_db < database/smartre.sql 2>/dev/null && \
@@ -81,60 +123,50 @@ if [ "$MYSQL_READY" = true ]; then
   else
     echo "  ✅ Database OK ($TABLE_COUNT tables)"
   fi
+else
+  echo "  ❌ MySQL failed to start"
 fi
 
 # ── 4. Kill old PHP server ─────────────────────────────────────────────────
 pkill -f "php.*-S 0.0.0.0:8080" 2>/dev/null || true
 sleep 1
 
-# ── 5. Tạo php.ini tùy chỉnh để force-load pdo_mysql ─────────────────────
-CUSTOM_INI="$WORK_DIR/.devcontainer/php-codespaces.ini"
-
-# Lấy extension_dir mặc định của PHP
-DEFAULT_EXT_DIR=$("$PHP_BIN" -r "echo ini_get('extension_dir');" 2>/dev/null || echo "")
-
-cat > "$CUSTOM_INI" << INIEOF
-[PHP]
-; Force load pdo_mysql even if not in default extension_dir
-; Auto-generated by start-services.sh
-INIEOF
-
-# Thêm pdo_mysql.so đường dẫn tuyệt đối nếu tìm thấy
-if [ -n "$PDO_SO" ] && [ "$PDO_MYSQL_READY" = true ]; then
-  echo "extension = $PDO_SO" >> "$CUSTOM_INI"
-  echo "  ✅ php.ini configured with: extension = $PDO_SO"
-fi
-
-# Thêm extension_dir gốc để không mất các extensions khác
-if [ -n "$DEFAULT_EXT_DIR" ]; then
-  echo "extension_dir = $DEFAULT_EXT_DIR" >> "$CUSTOM_INI"
-fi
-
-# Show generated ini
-echo "  📄 Generated $CUSTOM_INI:"
-cat "$CUSTOM_INI"
-
-# ── 6. Start PHP server với custom ini ────────────────────────────────────
+# ── 5. Start PHP server ────────────────────────────────────────────────────
 echo "🚀 Starting PHP server on :8080..."
-nohup "$PHP_BIN" -c "$CUSTOM_INI" -S 0.0.0.0:8080 -t "$WORK_DIR" > /tmp/php-server.log 2>&1 &
+echo "   Binary: $PHP_BIN ${EXTRA_PHP_ARGS:-}"
+
+# shellcheck disable=SC2086
+nohup "$PHP_BIN" $EXTRA_PHP_ARGS -S 0.0.0.0:8080 -t "$WORK_DIR" > /tmp/php-server.log 2>&1 &
 PHP_PID=$!
 sleep 2
 
 if kill -0 $PHP_PID 2>/dev/null; then
-  # Verify pdo_mysql is loaded in the running server
-  PDO_CHECK=$("$PHP_BIN" -c "$CUSTOM_INI" -r "echo in_array('mysql', PDO::getAvailableDrivers()) ? 'YES' : 'NO';" 2>/dev/null)
+  # Verify pdo_mysql is active in the running PHP
+  # shellcheck disable=SC2086
+  PDO_CHECK=$("$PHP_BIN" $EXTRA_PHP_ARGS -r "echo implode(',', PDO::getAvailableDrivers());" 2>/dev/null)
   echo "  ✅ PHP server running (PID $PHP_PID)"
-  echo "  pdo_mysql loaded: $PDO_CHECK"
+  echo "  PDO drivers available: $PDO_CHECK"
+  if echo "$PDO_CHECK" | grep -q mysql; then
+    echo "  ✅ MySQL driver confirmed — DB will work!"
+  else
+    echo "  ❌ MySQL driver NOT in PDO list — DB calls will fail"
+    echo "  PHP server log:"
+    tail -5 /tmp/php-server.log 2>/dev/null || true
+  fi
 else
   echo "  ❌ PHP server failed! Log:"
   cat /tmp/php-server.log 2>/dev/null || true
 fi
 
-# ── 7. Ensure uploads folder permissions ──────────────────────────────────
+# ── 6. Uploads permissions ─────────────────────────────────────────────────
 mkdir -p uploads/properties uploads/users uploads/kyc
 chmod -R 777 uploads/ 2>/dev/null || true
 
 echo ""
-echo "✅ Services ready! Run: npm run dev"
-echo "   Debug API: /smart-real-estate-management-system/api/debug.php"
+echo "============================================="
+echo "  ✅ SmartRE services started!"
+echo "============================================="
+echo "  PHP: $PHP_BIN"
+echo "  Run: npm run dev"
+echo "  Debug: /smart-real-estate-management-system/api/debug.php"
 echo ""
