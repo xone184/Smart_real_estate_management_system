@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id'])) {
 // Check which folder to upload (e.g. properties, users)
 $type = $_POST['type'] ?? 'properties';
 
-$uploadDir = __DIR__ . "/../uploads/{$type}/";
+$uploadDir = __DIR__ . "/../../uploads/{$type}/";
 
 if (!is_dir($uploadDir)) {
     mkdir($uploadDir, 0777, true);

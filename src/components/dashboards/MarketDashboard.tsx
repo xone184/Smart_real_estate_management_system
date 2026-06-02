@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -14,11 +12,10 @@ import {
   Cell,
   PieChart,
   Pie,
-  Legend,
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../shared/ui/Card';
-import { TrendingUp, TrendingDown, Users, Home, DollarSign, Star, RefreshCw, BarChart3 } from 'lucide-react';
-import { apiGetMarketStats, MarketStats } from '../../services/api';
+import { TrendingUp, TrendingDown, Users, Home, DollarSign, Star, RefreshCw, BarChart3, Newspaper, Award, MapPin, Sparkles } from 'lucide-react';
+import { apiGetMarketStats, apiGetMarketTrends, MarketStats, MarketTrendsData } from '../../services/api';
 import { Button } from '../shared/ui/Button';
 import { motion } from 'motion/react';
 
@@ -45,19 +42,31 @@ const FALLBACK_STATS: MarketStats = {
   by_month: [],
 };
 
-export function MarketDashboard() {
+interface MarketDashboardProps {
+  userRole?: string;
+}
+
+export function MarketDashboard({ userRole }: MarketDashboardProps) {
   const [stats, setStats] = useState<MarketStats | null>(null);
+  const [trends, setTrends] = useState<MarketTrendsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [trendsLoading, setTrendsLoading] = useState(true);
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   
-  // Date filters
+  // Date filters for system stats
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+
+  const isAdmin = userRole === 'admin';
 
   useEffect(() => {
     fetchStats();
   }, [fromDate, toDate]);
+
+  useEffect(() => {
+    fetchTrends();
+  }, []);
 
   const fetchStats = async () => {
     setLoading(true);
@@ -74,46 +83,109 @@ export function MarketDashboard() {
     }
   };
 
+  const fetchTrends = async () => {
+    setTrendsLoading(true);
+    try {
+      const data = await apiGetMarketTrends();
+      setTrends(data);
+    } catch (err) {
+      console.error('Không thể tải xu hướng thị trường từ internet:', err);
+    } finally {
+      setTrendsLoading(false);
+    }
+  };
+
+  const handleRefreshAll = () => {
+    fetchStats();
+    fetchTrends();
+  };
+
   const s = stats || FALLBACK_STATS;
 
-  const statCards = [
-    {
-      title: 'Giá trung bình',
-      value: s.avg_price > 0
-        ? s.avg_price >= 1000
-          ? `${(s.avg_price / 1000).toFixed(1)} tỷ`
-          : `${s.avg_price.toFixed(0)} tr`
-        : 'N/A',
-      subtext: 'triệu đồng/BĐS',
-      isUp: true,
-      icon: <DollarSign className="w-5 h-5 text-blue-600" />,
-      bg: 'bg-blue-50',
-    },
-    {
-      title: 'Tổng tin đăng',
-      value: s.total_properties.toLocaleString('vi-VN'),
-      subtext: `${s.total_active} đang hiển thị`,
-      isUp: true,
-      icon: <Home className="w-5 h-5 text-green-600" />,
-      bg: 'bg-green-50',
-    },
-    {
-      title: 'Tổng người dùng',
-      value: ((stats as any)?.total_users ?? 0).toLocaleString('vi-VN'),
-      subtext: 'thành viên đã đăng ký',
-      isUp: true,
-      icon: <Users className="w-5 h-5 text-purple-600" />,
-      bg: 'bg-purple-50',
-    },
-    {
-      title: 'Điểm đánh giá TB',
-      value: ((stats as any)?.avg_rating ?? 0).toFixed(1),
-      subtext: `${(stats as any)?.total_reviews ?? 0} lượt đánh giá`,
-      isUp: true,
-      icon: <Star className="w-5 h-5 text-orange-600" />,
-      bg: 'bg-orange-50',
-    },
-  ];
+  // Xây dựng danh sách Card thống kê
+  const statCards = isAdmin
+    ? [
+        {
+          title: 'Giá trung bình',
+          value: s.avg_price > 0
+            ? s.avg_price >= 1000
+              ? `${(s.avg_price / 1000).toFixed(1)} tỷ`
+              : `${s.avg_price.toFixed(0)} tr`
+            : 'N/A',
+          subtext: 'triệu đồng/BĐS (hệ thống)',
+          isUp: true,
+          icon: <DollarSign className="w-5 h-5 text-blue-600" />,
+          bg: 'bg-blue-50',
+        },
+        {
+          title: 'Tổng tin đăng',
+          value: s.total_properties.toLocaleString('vi-VN'),
+          subtext: `${s.total_active} đang hiển thị`,
+          isUp: true,
+          icon: <Home className="w-5 h-5 text-green-600" />,
+          bg: 'bg-green-50',
+        },
+        {
+          title: 'Tổng người dùng',
+          value: ((stats as any)?.total_users ?? 0).toLocaleString('vi-VN'),
+          subtext: 'thành viên đã đăng ký',
+          isUp: true,
+          icon: <Users className="w-5 h-5 text-purple-600" />,
+          bg: 'bg-purple-50',
+        },
+        {
+          title: 'Điểm đánh giá TB',
+          value: ((stats as any)?.avg_rating ?? 0).toFixed(1),
+          subtext: `${(stats as any)?.total_reviews ?? 0} lượt đánh giá`,
+          isUp: true,
+          icon: <Star className="w-5 h-5 text-orange-600" />,
+          bg: 'bg-orange-50',
+        },
+      ]
+    : [
+        {
+          title: 'Giá trung bình',
+          value: s.avg_price > 0
+            ? s.avg_price >= 1000
+              ? `${(s.avg_price / 1000).toFixed(1)} tỷ`
+              : `${s.avg_price.toFixed(0)} tr`
+            : 'N/A',
+          subtext: 'triệu đồng/BĐS (hệ thống)',
+          isUp: true,
+          icon: <DollarSign className="w-5 h-5 text-blue-600" />,
+          bg: 'bg-blue-50',
+        },
+        {
+          title: 'Tin thu thập (Internet)',
+          value: trends ? `${trends.total_articles} bài viết` : 'Đang tải...',
+          subtext: 'Cập nhật từ 5 đầu báo lớn',
+          isUp: true,
+          icon: <Newspaper className="w-5 h-5 text-indigo-600" />,
+          bg: 'bg-indigo-50',
+        },
+        {
+          title: 'Tâm lý thị trường (Internet)',
+          value: trends
+            ? trends.summary.sentiment === 'bullish'
+              ? 'Tích cực'
+              : trends.summary.sentiment === 'bearish'
+              ? 'Cẩn trọng'
+              : 'Trung lập'
+            : 'Đang tải...',
+          subtext: 'Phân tích tự động bằng AI',
+          isUp: trends ? trends.summary.sentiment === 'bullish' : true,
+          icon: <TrendingUp className="w-5 h-5 text-emerald-600" />,
+          bg: 'bg-emerald-50',
+        },
+        {
+          title: 'Số báo kết nối',
+          value: trends ? `${trends.summary.total_sources} nguồn` : 'Đang tải...',
+          subtext: 'VnExpress, CafeF, Dantri...',
+          isUp: true,
+          icon: <Award className="w-5 h-5 text-amber-600" />,
+          bg: 'bg-amber-50',
+        },
+      ];
 
   // Chuẩn bị dữ liệu biểu đồ type
   const typeData = s.by_type.map(t => ({
@@ -123,22 +195,27 @@ export function MarketDashboard() {
     color: COLORS_MAP[t.type] || '#94a3b8',
   }));
 
+  // Phân bổ loại BĐS: Admin dùng hệ thống, User/Agent dùng Internet
+  const pieChartData = isAdmin
+    ? typeData
+    : (trends?.type_distribution.map(t => ({
+        name: t.name,
+        value: t.count,
+        color: t.color,
+      })) || []);
+
   // Chuẩn bị dữ liệu biểu đồ tháng (6 tháng gần nhất nếu không có filter)
-  const chartMonthData = [];
-  
+  const chartMonthData: any[] = [];
   if (fromDate || toDate) {
-    // Nếu có filter date, thì dựa trên API trả về các tháng nào thì hiện tháng đó
-    // Khôi phục mảng tháng có trong dữ liệu
     const sortedMonths = [...s.by_month].sort((a, b) => a.month.localeCompare(b.month));
     sortedMonths.forEach(m => {
       const parts = m.month.split('-');
       chartMonthData.push({
         month: `T${parts[1]}`,
-        count: m.count
+        count: m.count,
       });
     });
   } else {
-    // Default 6 tháng
     const today = new Date();
     for (let i = 5; i >= 0; i--) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
@@ -148,12 +225,15 @@ export function MarketDashboard() {
       const found = s.by_month?.find(m => m.month === yyyy_mm);
       chartMonthData.push({
         month: label,
-        count: found ? found.count : 0
+        count: found ? found.count : 0,
       });
     }
   }
 
-  if (loading && !stats) {
+  // Chuẩn bị dữ liệu tần suất tin tức theo ngày (Internet)
+  const internetTrendData = trends?.daily_trend || [];
+
+  if (loading && trendsLoading && !stats && !trends) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -173,39 +253,46 @@ export function MarketDashboard() {
     <div className="space-y-6">
       {/* Header with Filters & Refresh */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Từ ngày</label>
-            <input 
-              type="date" 
-              value={fromDate} 
-              onChange={e => setFromDate(e.target.value)} 
-              className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        {isAdmin ? (
+          <div className="flex items-center gap-3">
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Từ ngày</label>
+              <input 
+                type="date" 
+                value={fromDate} 
+                onChange={e => setFromDate(e.target.value)} 
+                className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Đến ngày</label>
+              <input 
+                type="date" 
+                value={toDate} 
+                onChange={e => setToDate(e.target.value)} 
+                className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="pt-5">
+              <Button variant="outline" size="sm" onClick={() => { setFromDate(''); setToDate(''); }} className="rounded-lg h-[34px]" disabled={!fromDate && !toDate}>
+                Xoá lọc
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Đến ngày</label>
-            <input 
-              type="date" 
-              value={toDate} 
-              onChange={e => setToDate(e.target.value)} 
-              className="text-sm p-1.5 border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-            />
+        ) : (
+          <div className="flex items-center gap-2 text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-2 text-sm font-semibold">
+            <Sparkles className="w-4 h-4 text-indigo-600 animate-pulse" />
+            Đang hiển thị Xu hướng Thị trường tổng hợp Thời gian thực từ Internet
           </div>
-          <div className="pt-5">
-            <Button variant="outline" size="sm" onClick={() => { setFromDate(''); setToDate(''); }} className="rounded-lg h-[34px]" disabled={!fromDate && !toDate}>
-              Xoá lọc
-            </Button>
-          </div>
-        </div>
+        )}
         
         <div className="flex items-center gap-3 pt-5 md:pt-0">
           <p className="text-xs text-gray-400 hidden lg:block">
             Cập nhật: {lastRefresh.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
           </p>
-          <Button variant="outline" size="sm" onClick={fetchStats} className="rounded-xl gap-2" disabled={loading}>
-            <RefreshCw className={loading ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'} />
-            {loading ? 'Đang tải...' : 'Làm mới'}
+          <Button variant="outline" size="sm" onClick={handleRefreshAll} className="rounded-xl gap-2" disabled={loading || trendsLoading}>
+            <RefreshCw className={loading || trendsLoading ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'} />
+            {loading || trendsLoading ? 'Đang tải...' : 'Làm mới'}
           </Button>
         </div>
       </div>
@@ -236,7 +323,7 @@ export function MarketDashboard() {
                 </div>
                 <div>
                   <p className="text-sm text-gray-500 font-medium">{stat.title}</p>
-                  <h4 className="text-2xl font-bold mt-1">{stat.value}</h4>
+                  <h4 className="text-2xl font-bold mt-1 text-gray-900">{stat.value}</h4>
                   <p className="text-xs text-gray-400 mt-0.5">{stat.subtext}</p>
                 </div>
               </CardContent>
@@ -245,54 +332,106 @@ export function MarketDashboard() {
         ))}
       </div>
 
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Biểu đồ số lượng tin đăng theo tháng */}
-        <Card className="lg:col-span-2">
+        {/* Biểu đồ chính bên trái */}
+        {isAdmin ? (
+          /* Admin: Số lượng tin đăng hệ thống theo tháng */
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-gray-900">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                Số lượng tin đăng theo tháng (Hệ thống)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartMonthData}>
+                    <defs>
+                      <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                      formatter={(val: any) => [`${val} tin`, 'Số lượng']}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorCount)"
+                      dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          /* User / Agent: Tần suất bài viết BĐS trên báo chí theo ngày (Internet) */
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2 text-gray-900">
+                <Newspaper className="w-5 h-5 text-indigo-600" />
+                Tần suất thảo luận về BĐS trên báo chí (Internet)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[280px] w-full">
+                {internetTrendData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-gray-400 text-sm">
+                    Đang quét dữ liệu báo chí...
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={internetTrendData}>
+                      <defs>
+                        <linearGradient id="colorInternetCount" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.15} />
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                      <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
+                      <Tooltip
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        formatter={(val: any) => [`${val} bài viết`, 'Tần suất']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#colorInternetCount)"
+                        dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Biểu đồ phân bổ loại BĐS (Phải) */}
+        <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-              Số lượng tin đăng theo tháng
+            <CardTitle className="text-lg text-gray-900">
+              {isAdmin ? 'Phân bổ loại BĐS (Hệ thống)' : 'Phân bổ mối quan tâm (Internet)'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartMonthData}>
-                  <defs>
-                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15} />
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                    formatter={(val: any) => [`${val} tin`, 'Số lượng']}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#3b82f6"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorCount)"
-                    dot={{ r: 4, fill: '#3b82f6', strokeWidth: 2, stroke: '#fff' }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Pie chart phân loại BĐS */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Phân bổ loại BĐS</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {typeData.length === 0 ? (
+            {pieChartData.length === 0 ? (
               <div className="h-[280px] flex items-center justify-center text-gray-400 text-sm">
                 Chưa có dữ liệu
               </div>
@@ -302,7 +441,7 @@ export function MarketDashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={typeData}
+                        data={pieChartData}
                         cx="50%"
                         cy="50%"
                         innerRadius={45}
@@ -310,13 +449,15 @@ export function MarketDashboard() {
                         paddingAngle={4}
                         dataKey="value"
                       >
-                        {typeData.map((entry, index) => (
+                        {pieChartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
                       <Tooltip
                         formatter={(val: any, name: any, props: any) => [
-                          `${val} tin - Giá TB: ${(props.payload.avg / 1000).toFixed(1)} tỷ`,
+                          isAdmin
+                            ? `${val} tin - Giá TB: ${(props.payload.avg / 1000).toFixed(1)} tỷ`
+                            : `${val} bài viết đề cập`,
                           props.payload.name
                         ]}
                         contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
@@ -325,13 +466,15 @@ export function MarketDashboard() {
                   </ResponsiveContainer>
                 </div>
                 <div className="space-y-2">
-                  {typeData.map((item) => (
+                  {pieChartData.map((item) => (
                     <div key={item.name} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-gray-700">{item.name}</span>
                       </div>
-                      <span className="font-bold text-gray-900">{item.value} tin</span>
+                      <span className="font-bold text-gray-900">
+                        {item.value} {isAdmin ? 'tin' : 'bài'}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -341,11 +484,72 @@ export function MarketDashboard() {
         </Card>
       </div>
 
-      {/* Bảng giá TB theo loại */}
+      {/* User / Agent: Khu vực & Chủ đề BĐS nóng từ báo chí */}
+      {!isAdmin && trends && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Khu vực BĐS được nhắc đến nhiều nhất */}
+          {trends.hot_areas && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-gray-900">
+                  <MapPin className="w-5 h-5 text-rose-500" />
+                  Khu vực BĐS được truyền thông quan tâm nhất
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {trends.hot_areas.slice(0, 5).map((area, index) => (
+                    <div key={area.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-xs font-bold">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm font-medium text-gray-700">{area.name}</span>
+                      </div>
+                      <span className="text-xs bg-rose-50 text-rose-700 font-bold px-2 py-0.5 rounded-full">
+                        {area.count} lượt nhắc
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Chủ đề thảo luận nhiều nhất */}
+          {trends.hot_topics && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-gray-900">
+                  <TrendingUp className="w-5 h-5 text-emerald-500" />
+                  Chủ đề thị trường được nhắc đến nhiều nhất
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {trends.hot_topics.slice(0, 5).map((topic, index) => (
+                    <div key={topic.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full" style={{ backgroundColor: topic.color }} />
+                        <span className="text-sm font-medium text-gray-700">{topic.name}</span>
+                      </div>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${topic.color}15`, color: topic.color }}>
+                        {topic.count} bài viết
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Bảng giá trung bình theo loại hình (Hệ thống) */}
       {typeData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Bảng giá trung bình theo loại hình</CardTitle>
+            <CardTitle className="text-lg text-gray-900">Bảng giá trung bình theo loại hình (Hệ thống)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] w-full">
@@ -374,10 +578,51 @@ export function MarketDashboard() {
           </CardContent>
         </Card>
       )}
+
+      {/* Tin tức thị trường BĐS trực tuyến thu thập từ Internet */}
+      {trends && trends.articles && (
+        <Card>
+          <CardHeader className="border-b border-gray-100 pb-4">
+            <CardTitle className="text-lg flex items-center gap-2 text-gray-900">
+              <Newspaper className="w-5 h-5 text-indigo-600 animate-pulse" />
+              Tin tức thị trường BĐS trực tuyến (Tổng hợp từ Internet)
+            </CardTitle>
+            <p className="text-xs text-gray-400 mt-1">
+              Hệ thống tự động quét RSS feeds từ VnExpress, CafeF, VietnamNet, Thanh Niên, Dân Trí mỗi 15 phút
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-[500px] overflow-y-auto divide-y divide-gray-100 pr-2">
+              {trends.articles.map((art) => (
+                <div key={art.id} className="p-5 hover:bg-gray-50/80 transition-colors">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span
+                      className="text-[10px] font-extrabold px-2 py-0.5 rounded-full text-white tracking-wide uppercase"
+                      style={{ backgroundColor: trends.sources.find(s => s.key === art.source_key)?.color || '#6b7280' }}
+                    >
+                      {art.source}
+                    </span>
+                    <span className="text-xs text-gray-400 font-medium">
+                      {art.date_label}
+                    </span>
+                  </div>
+                  <a
+                    href={art.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-900 font-bold hover:text-blue-600 text-sm sm:text-base transition-colors leading-snug block mb-1.5"
+                  >
+                    {art.title}
+                  </a>
+                  <p className="text-xs sm:text-sm text-gray-500 line-clamp-2 leading-relaxed">
+                    {art.snippet}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
-}
-
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
 }

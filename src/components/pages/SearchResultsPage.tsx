@@ -103,7 +103,7 @@ export function SearchResultsPage({
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Sidebar Filters */}
         <div className={cn(
-          "lg:w-1/4 lg:block space-y-6",
+          "lg:w-1/4 lg:block space-y-6 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-120px)] lg:overflow-y-auto lg:pr-2",
           showMobileFilters ? "block fixed inset-0 z-50 bg-white p-4 overflow-y-auto" : "hidden"
         )}>
           {showMobileFilters && (
@@ -115,20 +115,20 @@ export function SearchResultsPage({
             </div>
           )}
 
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-            <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+            <h3 className="font-bold text-base mb-2.5 flex items-center gap-2">
+              <Filter className="w-4 h-4 text-blue-600" />
               Tìm kiếm nâng cao
             </h3>
             
-            <div className="space-y-5">
+            <div className="space-y-2.5">
               {/* Type Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Loại hình</label>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Loại hình</label>
                 <select 
                   value={filters.type} 
                   onChange={e => setFilters({...filters, type: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Tất cả loại hình</option>
                   <option value="apartment">Căn hộ</option>
@@ -140,11 +140,11 @@ export function SearchResultsPage({
 
               {/* City Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">📍 Tỉnh / Thành phố</label>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">📍 Tỉnh / Thành phố</label>
                 <select
                   value={filters.city}
                   onChange={e => setFilters({...filters, city: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Toàn quốc</option>
                   <optgroup label="── Miền Bắc ──">
@@ -176,69 +176,69 @@ export function SearchResultsPage({
 
               {/* Price Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Mức giá (Triệu VNĐ)</label>
-                <div className="flex gap-2">
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Mức giá (Triệu VNĐ)</label>
+                <div className="flex gap-1.5">
                   <input 
                     type="number" 
-                    placeholder="Tử" 
+                    placeholder="Từ" 
                     value={filters.price_min}
                     onChange={e => setFilters({...filters, price_min: e.target.value})}
-                    className="w-1/2 p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-1/2 py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input 
                     type="number" 
                     placeholder="Đến" 
                     value={filters.price_max}
                     onChange={e => setFilters({...filters, price_max: e.target.value})}
-                    className="w-1/2 p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-1/2 py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               {/* Area Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Diện tích (m²)</label>
-                <div className="flex gap-2">
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Diện tích (m²)</label>
+                <div className="flex gap-1.5">
                   <input 
                     type="number" 
-                    placeholder="Tử" 
+                    placeholder="Từ" 
                     value={filters.area_min}
                     onChange={e => setFilters({...filters, area_min: e.target.value})}
-                    className="w-1/2 p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-1/2 py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                   <input 
                     type="number" 
                     placeholder="Đến" 
                     value={filters.area_max}
                     onChange={e => setFilters({...filters, area_max: e.target.value})}
-                    className="w-1/2 p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-1/2 py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               {/* Bedrooms Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Số phòng ngủ</label>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Số phòng ngủ</label>
                 <select 
                   value={filters.bedrooms} 
                   onChange={e => setFilters({...filters, bedrooms: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Tất cả</option>
                   <option value="1">Từ 1 phòng</option>
                   <option value="2">Từ 2 phòng</option>
                   <option value="3">Từ 3 phòng</option>
-                  <option value="4">Từ 4 phòng trớ lên</option>
+                  <option value="4">Từ 4 phòng trở lên</option>
                 </select>
               </div>
 
               {/* Direction Filter */}
               <div>
-                <label className="text-sm font-medium text-gray-700 block mb-2">Hướng nhà</label>
+                <label className="text-xs font-semibold text-gray-600 block mb-1">Hướng nhà</label>
                 <select 
                   value={filters.direction} 
                   onChange={e => setFilters({...filters, direction: e.target.value})}
-                  className="w-full p-3 border border-gray-200 rounded-xl bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full py-1.5 px-2.5 text-sm border border-gray-200 rounded-lg bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Tất cả hướng</option>
                   <option value="Đông">Đông</option>
@@ -252,11 +252,11 @@ export function SearchResultsPage({
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-gray-100 flex flex-col gap-2">
-                <Button onClick={handleApplyFilter} className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-3 rounded-xl shadow-lg">
+              <div className="pt-3 border-t border-gray-100 flex flex-col gap-1.5">
+                <Button onClick={handleApplyFilter} className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-2 text-sm rounded-lg shadow-md">
                   Áp dụng bộ lọc
                 </Button>
-                <Button variant="ghost" onClick={handleResetFilters} className="w-full text-gray-500">
+                <Button variant="ghost" onClick={handleResetFilters} className="w-full text-xs text-gray-500 py-1.5">
                   Xóa bộ lọc
                 </Button>
               </div>
@@ -267,7 +267,8 @@ export function SearchResultsPage({
         {/* Main Content Area */}
         <div className="lg:w-3/4 flex-grow space-y-6">
           {/* Top Search Bar */}
-           <div className="flex gap-2 w-full max-w-2xl bg-white p-2 border border-gray-200 shadow-sm rounded-xl items-center relative z-10">
+          <div className="sticky top-16 z-20 bg-white py-3 border-b border-gray-100 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex gap-2 w-full max-w-2xl bg-white p-2 border border-gray-200 shadow-sm rounded-xl items-center relative z-10">
               <Search className="w-5 h-5 text-gray-400 ml-3 shrink-0" />
               <input 
                 type="text" 
@@ -284,6 +285,7 @@ export function SearchResultsPage({
                 Tìm
               </Button>
             </div>
+          </div>
 
           {/* Results Summary and Sorting */}
           <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -315,7 +317,7 @@ export function SearchResultsPage({
                   key={prop.id}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: idx * 0.05 }}
+                  transition={{ duration: 0.3 }}
                 >
                   <PropertyCard 
                     property={prop} 

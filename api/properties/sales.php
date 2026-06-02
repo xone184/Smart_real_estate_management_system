@@ -94,13 +94,13 @@ try {
             );
         }
 
-        jsonResponse(['status' => 'success', 'message' => 'Tạo đề nghị chốt giá thành công', 'transaction_id' => $transactionId]);
+        jsonResponse(201, ['status' => 'success', 'message' => 'Tạo đề nghị chốt giá thành công', 'transaction_id' => $transactionId]);
     }
 
     // =============================================
     // 2. CONFIRM SALE - Xác nhận chốt giá thành công
     // =============================================
-    else if ($method === 'POST' && $action === 'confirm') {
+    elseif ($method === 'POST' && $action === 'confirm') {
         $data = getRequestBody();
         
         if (empty($data['transaction_id'])) {
@@ -200,7 +200,7 @@ try {
             );
         }
 
-        jsonResponse([
+        jsonResponse(200, [
             'status' => 'success', 
             'message' => 'Xác nhận chốt giá thành công',
             'transaction_id' => $data['transaction_id']
@@ -210,7 +210,7 @@ try {
     // =============================================
     // 3. GET SALE HISTORY - Lấy lịch sử chốt giá
     // =============================================
-    else if ($method === 'GET' && $action === 'history') {
+    elseif ($method === 'GET' && $action === 'history') {
         $authUser = getAuthUser();
         if (!$authUser) {
             throw new Exception('Chưa đăng nhập', 401);
@@ -248,13 +248,13 @@ try {
         $stmt->execute($params);
         $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        jsonResponse(['status' => 'success', 'data' => $history]);
+        jsonResponse(200, ['status' => 'success', 'data' => $history]);
     }
 
     // =============================================
     // 4. GET SALE INFO - Lấy thông tin chốt giá của bất động sản
     // =============================================
-    else if ($method === 'GET' && $action === 'info') {
+    elseif ($method === 'GET' && $action === 'info') {
         $propertyId = $_GET['property_id'] ?? null;
         
         if (!$propertyId) {
@@ -270,7 +270,7 @@ try {
             throw new Exception('Không tìm thấy bất động sản', 404);
         }
 
-        jsonResponse(['status' => 'success', 'data' => $property]);
+        jsonResponse(200, ['status' => 'success', 'data' => $property]);
     }
 
     else {
@@ -278,20 +278,6 @@ try {
     }
 
 } catch (Exception $e) {
-    http_response_code($e->getCode() ?: 500);
-    jsonResponse(['status' => 'error', 'message' => $e->getMessage()]);
-}
-
-/**
- * Helper function to send notification
- */
-function sendNotification($userId, $title, $message, $type = 'info', $notificationType = 'general', $relatedId = null) {
-    $db = getDB();
-    
-    $stmt = $db->prepare("INSERT INTO notifications 
-                        (user_id, title, message, type, notification_type, related_id) 
-                        VALUES (?, ?, ?, ?, ?, ?)");
-    
-    return $stmt->execute([$userId, $title, $message, $type, $notificationType, $relatedId]);
+    jsonResponse($e->getCode() ?: 500, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>

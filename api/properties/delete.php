@@ -108,7 +108,7 @@ try {
             );
         }
 
-        jsonResponse([
+        jsonResponse(200, [
             'status' => 'success',
             'message' => 'Xóa bất động sản thành công',
             'property_id' => $property['id']
@@ -118,7 +118,7 @@ try {
     // =============================================
     // 2. DELETE UNSOLD PROPERTY - Xóa bất động sản chưa bán
     // =============================================
-    else if ($method === 'DELETE' && $action === 'unsold') {
+    elseif ($method === 'DELETE' && $action === 'unsold') {
         $data = getRequestBody();
         
         if (empty($data['property_id'])) {
@@ -181,7 +181,7 @@ try {
             $property['id']
         );
 
-        jsonResponse([
+        jsonResponse(200, [
             'status' => 'success',
             'message' => 'Xóa bất động sản thành công'
         ]);
@@ -190,7 +190,7 @@ try {
     // =============================================
     // 3. GET DELETION LOGS - Lấy lịch sử xóa
     // =============================================
-    else if ($method === 'GET' && $action === 'logs') {
+    elseif ($method === 'GET' && $action === 'logs') {
         $authUser = getAuthUser();
         if (!$authUser) {
             throw new Exception('Chưa đăng nhập', 401);
@@ -221,7 +221,7 @@ try {
         $stmt->execute();
         $total = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
 
-        jsonResponse([
+        jsonResponse(200, [
             'status' => 'success',
             'data' => $logs,
             'pagination' => [
@@ -235,7 +235,7 @@ try {
     // =============================================
     // 4. RESTORE PROPERTY - Khôi phục bất động sản đã xóa
     // =============================================
-    else if ($method === 'POST' && $action === 'restore') {
+    elseif ($method === 'POST' && $action === 'restore') {
         $data = getRequestBody();
         
         if (empty($data['property_id'])) {
@@ -271,20 +271,6 @@ try {
     }
 
 } catch (Exception $e) {
-    http_response_code($e->getCode() ?: 500);
-    jsonResponse(['status' => 'error', 'message' => $e->getMessage()]);
-}
-
-/**
- * Helper function to send notification
- */
-function sendNotification($userId, $title, $message, $type = 'info', $notificationType = 'general', $relatedId = null) {
-    $db = getDB();
-    
-    $stmt = $db->prepare("INSERT INTO notifications 
-                        (user_id, title, message, type, notification_type, related_id) 
-                        VALUES (?, ?, ?, ?, ?, ?)");
-    
-    return $stmt->execute([$userId, $title, $message, $type, $notificationType, $relatedId]);
+    jsonResponse($e->getCode() ?: 500, ['status' => 'error', 'message' => $e->getMessage()]);
 }
 ?>

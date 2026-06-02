@@ -44,6 +44,10 @@ import {
   ApiContactMessage,
   apiGetContactsAdmin,
   apiUpdateContactStatus,
+  apiGetKYCAdminList,
+  apiGetKYCLogs,
+  apiApproveKYC,
+  apiRejectKYC,
 } from '../../services/api';
 import { Property, UserProfile } from '../../types';
 import { MarketDashboard } from './MarketDashboard';
@@ -81,7 +85,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string }> =
 // ─── Component ───────────────────────────────────────────────────────────────
 interface AdminDashboardProps {
   onNavigate?: (page: string) => void;
-  initialTab?: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts';
+  initialTab?: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc';
 }
 
 export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) {
@@ -91,11 +95,22 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
   const [loading, setLoading] = useState(true);
   const [subLoading, setSubLoading] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts'>(initialTab || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc'>(initialTab || 'overview');
   const [subFilter, setSubFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
   const [contactMessages, setContactMessages] = useState<ApiContactMessage[]>([]);
   const [contactLoading, setContactLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  // KYC admin states
+  const [kycDocs, setKycDocs] = useState<any[]>([]);
+  const [kycLogsMap, setKycLogsMap] = useState<Record<number, any[]>>({});
+  const [kycLoading, setKycLoading] = useState(false);
+  const [viewingKycDoc, setViewingKycDoc] = useState<any | null>(null);
+  const [rejectingKycDoc, setRejectingKycDoc] = useState<any | null>(null);
+  const [kycRejectReason, setKycRejectReason] = useState('');
+  const [viewingKycLogsDoc, setViewingKycLogsDoc] = useState<any | null>(null);
+  const [kycSearch, setKycSearch] = useState('');
+  const [kycStatusFilter, setKycStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Report/filter UI state
   const [filterOpen, setFilterOpen] = useState(false);
@@ -133,16 +148,18 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
 
   const fetchData = async () => {
     try {
-      const [propsData, usersData, subsData, contactsData] = await Promise.all([
+      const [propsData, usersData, subsData, contactsData, kycData] = await Promise.all([
         apiGetProperties(),
         apiGetUsers(),
         apiAdminGetSubscriptions(),
         apiGetContactsAdmin(),
+        apiGetKYCAdminList().catch(() => []),
       ]);
       setProperties(propsData as Property[]);
       setUsers(usersData as UserProfile[]);
       setSubscriptions(subsData);
       setContactMessages(contactsData);
+      setKycDocs(kycData);
     } catch (error) {
       console.error('Error fetching admin data:', error);
     } finally {
@@ -246,6 +263,28 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
     }
   };
 
+  const fetchKycDocs = async () => {
+    setKycLoading(true);
+    try {
+      const data = await apiGetKYCAdminList();
+      setKycDocs(data);
+    } catch (error) {
+      console.error('Error fetching KYC documents:', error);
+      showToast('Không thể tải danh sách KYC', 'error');
+    } finally {
+      setKycLoading(false);
+    }
+  };
+
+  const fetchKycLogs = async (userId: number) => {
+    try {
+      const data = await apiGetKYCLogs(userId);
+      setKycLogsMap(prev => ({ ...prev, [userId]: data }));
+    } catch (error) {
+      console.error('Error fetching KYC logs:', error);
+    }
+  };
+
   // Lazy load tabs
   useEffect(() => {
     if (activeTab === 'subscriptions' && subscriptions.length === 0) {
@@ -254,7 +293,42 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
     if (activeTab === 'contacts' && contactMessages.length === 0) {
       fetchContactMessages();
     }
+    if (activeTab === 'kyc') {
+      fetchKycDocs();
+    }
   }, [activeTab]);
+
+  const handleApproveKyc = async (userId: number) => {
+    if (!confirm('Bạn có chắc chắn muốn DUYỆT yêu cầu xác thực KYC này không?')) return;
+    try {
+      const res = await apiApproveKYC(userId, 'Yêu cầu KYC đã được duyệt bởi quản trị viên.');
+      showToast(res.message || 'Đã duyệt xác thực KYC tài khoản thành công');
+      fetchKycDocs();
+      const usersData = await apiGetUsers();
+      setUsers(usersData as UserProfile[]);
+    } catch (error: any) {
+      showToast(error.message || 'Lỗi duyệt KYC', 'error');
+    }
+  };
+
+  const handleRejectKyc = async () => {
+    if (!rejectingKycDoc) return;
+    if (!kycRejectReason.trim()) {
+      showToast('Vui lòng nhập lý do từ chối', 'error');
+      return;
+    }
+    try {
+      const res = await apiRejectKYC(rejectingKycDoc.user_id, kycRejectReason.trim());
+      showToast(res.message || 'Đã từ chối yêu cầu xác thực KYC');
+      setRejectingKycDoc(null);
+      setKycRejectReason('');
+      fetchKycDocs();
+      const usersData = await apiGetUsers();
+      setUsers(usersData as UserProfile[]);
+    } catch (error: any) {
+      showToast(error.message || 'Lỗi từ chối KYC', 'error');
+    }
+  };
 
   const handleApprove = async (id: number) => {
     try {
@@ -405,6 +479,19 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
   const filteredSubs = subFilter === 'all'
     ? subscriptions
     : subscriptions.filter((s) => s.status === subFilter);
+
+  const filteredKycDocs = kycDocs.filter((doc) => {
+    if (kycStatusFilter !== 'all' && doc.status !== kycStatusFilter) return false;
+    if (kycSearch.trim()) {
+      const q = kycSearch.toLowerCase();
+      const matchName = (doc.full_name || '').toLowerCase().includes(q);
+      const matchEmail = (doc.email || '').toLowerCase().includes(q);
+      const matchPhone = (doc.phone || '').toLowerCase().includes(q);
+      const matchDocNum = (doc.document_number || '').toLowerCase().includes(q);
+      return matchName || matchEmail || matchPhone || matchDocNum;
+    }
+    return true;
+  });
 
   const visibleProperties = properties.filter((p) => {
     const q = propSearch.trim().toLowerCase();
@@ -705,6 +792,12 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
             label: 'Liên hệ',
             icon: <MessageSquare className="w-4 h-4" />,
             badge: pendingContactCount > 0 ? pendingContactCount : undefined,
+          },
+          {
+            id: 'kyc',
+            label: 'Xác thực KYC',
+            icon: <Shield className="w-4 h-4" />,
+            badge: kycDocs.filter(d => d.status === 'pending').length > 0 ? kycDocs.filter(d => d.status === 'pending').length : undefined,
           },
         ].map((tab) => (
           <button
@@ -1438,6 +1531,468 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
               >
                 <Mail className="w-4 h-4 mr-2" />
                 Gửi Email phản hồi
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── KYC TAB ───────────────────────────────────────────────────────── */}
+      {activeTab === 'kyc' && (
+        <Card>
+          <CardHeader className="space-y-4">
+            <div className="flex flex-row items-center justify-between gap-4 flex-wrap">
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-blue-600" />
+                Quản lý xác thực tài khoản (KYC)
+                {kycDocs.filter(d => d.status === 'pending').length > 0 && (
+                  <span className="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                    {kycDocs.filter(d => d.status === 'pending').length} yêu cầu mới
+                  </span>
+                )}
+              </CardTitle>
+              <div className="flex items-center gap-3 flex-wrap">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm KYC..."
+                    value={kycSearch}
+                    onChange={(e) => setKycSearch(e.target.value)}
+                    className="pl-10 pr-4 py-2 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-blue-500 w-64"
+                  />
+                </div>
+                <select
+                  value={kycStatusFilter}
+                  onChange={(e) => setKycStatusFilter(e.target.value as any)}
+                  className="px-3 py-2 bg-gray-50 border-none rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 border border-gray-100"
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="pending">Chờ duyệt (Pending)</option>
+                  <option value="approved">Đã duyệt (Approved)</option>
+                  <option value="rejected">Từ chối (Rejected)</option>
+                </select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={fetchKycDocs}
+                  disabled={kycLoading}
+                  className="rounded-xl"
+                >
+                  {kycLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Làm mới'}
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {kycLoading ? (
+              <div className="flex items-center justify-center py-16 text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin mr-3" />
+                <span>Đang tải danh sách KYC...</span>
+              </div>
+            ) : filteredKycDocs.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                <Shield className="w-12 h-12 mx-auto mb-3 opacity-30 text-gray-400" />
+                <p className="font-medium text-gray-500">Không tìm thấy yêu cầu xác thực KYC nào</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left border-b border-gray-100">
+                      <th className="pb-4 font-bold text-gray-500 text-xs uppercase tracking-wider">Người dùng</th>
+                      <th className="pb-4 font-bold text-gray-500 text-xs uppercase tracking-wider">Loại giấy tờ</th>
+                      <th className="pb-4 font-bold text-gray-500 text-xs uppercase tracking-wider">Số giấy tờ</th>
+                      <th className="pb-4 font-bold text-gray-500 text-xs uppercase tracking-wider">Trạng thái</th>
+                      <th className="pb-4 font-bold text-gray-500 text-xs uppercase tracking-wider">Ngày gửi</th>
+                      <th className="pb-4 text-right">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {filteredKycDocs.slice((currentPage - 1) * 15, currentPage * 15).map((doc) => (
+                      <tr key={doc.id} className="group hover:bg-gray-50/50 transition-colors">
+                        <td className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600 font-bold overflow-hidden flex-shrink-0">
+                              {doc.photo_url ? <img src={doc.photo_url} className="w-full h-full object-cover" alt="" /> : doc.full_name?.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-gray-900">{doc.full_name}</p>
+                              <p className="text-[11px] text-gray-500">{doc.email} • {doc.phone}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm text-gray-700">
+                          {doc.document_type === 'national_id' ? 'CCCD / CMND' : 
+                           doc.document_type === 'passport' ? 'Hộ chiếu' : doc.document_type}
+                        </td>
+                        <td className="py-4 text-sm font-mono text-gray-600">
+                          {doc.document_number}
+                        </td>
+                        <td className="py-4">
+                          <span className={cn(
+                            'px-2.5 py-1 rounded-full text-[11px] font-bold uppercase',
+                            doc.status === 'approved' ? 'bg-green-50 text-green-600 border border-green-100' :
+                            doc.status === 'pending' ? 'bg-orange-50 text-orange-600 border border-orange-100' :
+                            'bg-red-50 text-red-600 border border-red-100'
+                          )}>
+                            {doc.status === 'approved' ? 'Đã duyệt' :
+                             doc.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
+                          </span>
+                        </td>
+                        <td className="py-4 text-xs text-gray-500">
+                          {new Date(doc.updated_at).toLocaleString('vi-VN')}
+                        </td>
+                        <td className="py-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-lg"
+                              onClick={() => {
+                                setViewingKycDoc(doc);
+                                fetchKycLogs(doc.user_id);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              Chi tiết
+                            </Button>
+                            {doc.status === 'pending' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-green-600 hover:bg-green-50 rounded-lg font-bold"
+                                  onClick={() => handleApproveKyc(doc.user_id)}
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Duyệt
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:bg-red-50 rounded-lg font-bold"
+                                  onClick={() => setRejectingKycDoc(doc)}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Từ chối
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-gray-500 hover:bg-gray-100 rounded-lg"
+                              onClick={() => {
+                                setViewingKycLogsDoc(doc);
+                                fetchKycLogs(doc.user_id);
+                              }}
+                            >
+                              <Clock className="w-4 h-4 mr-1" />
+                              Logs từ chối
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {filteredKycDocs.length > 0 && renderPagination(filteredKycDocs.length)}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* KYC Detail Modal */}
+      {viewingKycDoc && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+          >
+            <div className="p-8 border-b border-gray-100 flex items-center justify-between shrink-0">
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900">Chi tiết hồ sơ xác thực KYC</h3>
+                <p className="text-sm text-gray-500 mt-1">Người dùng: {viewingKycDoc.full_name} (#{viewingKycDoc.user_id})</p>
+              </div>
+              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setViewingKycDoc(null)}>
+                <X className="w-6 h-6 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-8 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Họ và tên</p>
+                  <p className="text-base font-bold text-gray-900">{viewingKycDoc.full_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Loại giấy tờ</p>
+                  <p className="text-base font-bold text-gray-900">
+                    {viewingKycDoc.document_type === 'national_id' ? 'CCCD / CMND' : 
+                     viewingKycDoc.document_type === 'passport' ? 'Hộ chiếu' : viewingKycDoc.document_type}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Số giấy tờ</p>
+                  <p className="text-base font-mono font-bold text-blue-600">{viewingKycDoc.document_number}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Email liên hệ</p>
+                  <p className="text-sm text-gray-700">{viewingKycDoc.email}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Số điện thoại</p>
+                  <p className="text-sm text-gray-700">{viewingKycDoc.phone || 'Chưa cung cấp'}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Trạng thái hiện tại</p>
+                  <span className={cn(
+                    'inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase w-fit',
+                    viewingKycDoc.status === 'approved' ? 'bg-green-100 text-green-700' :
+                    viewingKycDoc.status === 'pending' ? 'bg-orange-100 text-orange-700' :
+                    'bg-red-100 text-red-700'
+                  )}>
+                    {viewingKycDoc.status === 'approved' ? 'Đã xác thực' :
+                     viewingKycDoc.status === 'pending' ? 'Chờ duyệt' : 'Đã từ chối'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Document Images */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Hình ảnh đối chiếu</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Front Side */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-gray-500">Mặt trước giấy tờ:</span>
+                    <div className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-[4/3] bg-gray-50 flex items-center justify-center">
+                      {viewingKycDoc.image_front_url ? (
+                        <>
+                          <img src={viewingKycDoc.image_front_url} className="w-full h-full object-cover" alt="Front" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100 rounded-xl" onClick={() => window.open(viewingKycDoc.image_front_url, '_blank')}>
+                              Phóng to
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Không có ảnh</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Back Side */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-gray-500">Mặt sau giấy tờ:</span>
+                    <div className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-[4/3] bg-gray-50 flex items-center justify-center">
+                      {viewingKycDoc.image_back_url ? (
+                        <>
+                          <img src={viewingKycDoc.image_back_url} className="w-full h-full object-cover" alt="Back" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100 rounded-xl" onClick={() => window.open(viewingKycDoc.image_back_url, '_blank')}>
+                              Phóng to
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Không có ảnh</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selfie */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xs font-semibold text-gray-500">Ảnh chân dung chụp kèm giấy tờ:</span>
+                    <div className="relative group rounded-2xl overflow-hidden border border-gray-200 aspect-[4/3] bg-gray-50 flex items-center justify-center">
+                      {viewingKycDoc.image_selfie_url ? (
+                        <>
+                          <img src={viewingKycDoc.image_selfie_url} className="w-full h-full object-cover" alt="Selfie" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Button size="sm" className="bg-white text-gray-900 hover:bg-gray-100 rounded-xl" onClick={() => window.open(viewingKycDoc.image_selfie_url, '_blank')}>
+                              Phóng to
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic">Không có ảnh</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logs Map Section for the User */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Lịch sử phê duyệt KYC</p>
+                <div className="bg-gray-50 rounded-2xl border border-gray-100 p-4 space-y-3 max-h-48 overflow-y-auto">
+                  {kycLogsMap[viewingKycDoc.user_id]?.length > 0 ? (
+                    kycLogsMap[viewingKycDoc.user_id].map((log) => (
+                      <div key={log.id} className="text-xs border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={cn(
+                            'font-semibold px-2 py-0.5 rounded',
+                            log.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          )}>
+                            {log.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                          </span>
+                          <span className="text-gray-400">{new Date(log.created_at).toLocaleString('vi-VN')}</span>
+                        </div>
+                        {log.reason && <p className="text-gray-700 mt-1 bg-white p-2 rounded border border-gray-100"><strong className="text-gray-500">Lý do:</strong> {log.reason}</p>}
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400 italic text-center py-2">Không có lịch sử từ chối/phê duyệt trước đó.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-8 border-t border-gray-100 flex gap-3 justify-end bg-gray-50/50 shrink-0">
+              <Button variant="outline" className="rounded-2xl px-6" onClick={() => setViewingKycDoc(null)}>
+                Đóng
+              </Button>
+              {viewingKycDoc.status === 'pending' && (
+                <>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-2xl px-6"
+                    onClick={() => {
+                      handleApproveKyc(viewingKycDoc.user_id);
+                      setViewingKycDoc(null);
+                    }}
+                  >
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Duyệt xác thực
+                  </Button>
+                  <Button
+                    className="bg-red-600 hover:bg-red-700 text-white rounded-2xl px-6"
+                    onClick={() => {
+                      setRejectingKycDoc(viewingKycDoc);
+                      setViewingKycDoc(null);
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Từ chối yêu cầu
+                  </Button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* KYC Reject Modal */}
+      {rejectingKycDoc && (
+        <div className="fixed inset-0 z-[210] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Từ chối xác thực KYC</h3>
+                <p className="text-xs text-gray-500 mt-1">Hồ sơ của {rejectingKycDoc.full_name}</p>
+              </div>
+              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setRejectingKycDoc(null)}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-4">
+              <div className="space-y-1">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Nhập lý do từ chối (bắt buộc)</label>
+                <textarea
+                  value={kycRejectReason}
+                  onChange={(e) => setKycRejectReason(e.target.value)}
+                  placeholder="Ví dụ: Ảnh mặt sau mờ không đọc rõ thông tin, hoặc Ảnh chân dung selfie không khớp với giấy tờ..."
+                  rows={4}
+                  className="w-full p-4 border border-gray-200 rounded-3xl text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="p-8 border-t border-gray-100 flex gap-3 justify-end bg-gray-50/50">
+              <Button variant="outline" className="rounded-2xl px-5" onClick={() => {
+                setRejectingKycDoc(null);
+                setKycRejectReason('');
+              }}>
+                Huỷ bỏ
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white rounded-2xl px-5"
+                onClick={handleRejectKyc}
+              >
+                Xác nhận từ chối
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* KYC Logs Modal */}
+      {viewingKycLogsDoc && (
+        <div className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+          >
+            <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Nhật ký phê duyệt KYC</h3>
+                <p className="text-xs text-gray-500 mt-1">Người dùng: {viewingKycLogsDoc.full_name} (#{viewingKycLogsDoc.user_id})</p>
+              </div>
+              <button className="p-2 rounded-full hover:bg-gray-100 transition-colors" onClick={() => setViewingKycLogsDoc(null)}>
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-8 space-y-4 max-h-[60vh] overflow-y-auto">
+              {kycLogsMap[viewingKycLogsDoc.user_id]?.length > 0 ? (
+                <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-100">
+                  {kycLogsMap[viewingKycLogsDoc.user_id].map((log, index) => (
+                    <div key={log.id} className="relative pl-8">
+                      {/* Timeline dot */}
+                      <span className={cn(
+                        'absolute left-1.5 top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white -translate-x-1/2',
+                        log.status === 'approved' ? 'bg-green-500' : 'bg-red-500'
+                      )} />
+                      <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className={cn(
+                            'text-xs font-bold px-2.5 py-0.5 rounded-full',
+                            log.status === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                          )}>
+                            {log.status === 'approved' ? 'Đã duyệt' : 'Từ chối'}
+                          </span>
+                          <span className="text-[11px] text-gray-400">{new Date(log.created_at).toLocaleString('vi-VN')}</span>
+                        </div>
+                        {log.reason ? (
+                          <p className="text-xs text-gray-700 mt-2 bg-white p-3 rounded-xl border border-gray-200/50">
+                            <strong className="text-gray-500 block mb-1">Lý do từ chối / Phản hồi:</strong>
+                            {log.reason}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-gray-400 italic mt-2">Không có lý do đi kèm</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-400">
+                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p className="font-medium text-sm">Chưa có lịch sử thao tác nào</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-8 border-t border-gray-100 flex justify-end bg-gray-50/50">
+              <Button variant="outline" className="rounded-2xl px-5" onClick={() => setViewingKycLogsDoc(null)}>
+                Đóng
               </Button>
             </div>
           </motion.div>

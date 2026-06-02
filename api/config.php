@@ -111,6 +111,15 @@ if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS
 
 // Session configuration
 if (session_status() === PHP_SESSION_NONE) {
+    // Set explicit cookie params to ensure session works across all paths
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'secure' => false,
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_start();
 }
 
@@ -203,4 +212,19 @@ function getRequestBody(): array {
 // Helper: Get request method
 function getMethod(): string {
     return $_SERVER['REQUEST_METHOD'];
+}
+
+// Helper: Send notification
+function sendNotification($userId, $title, $message, $type = 'info', $notificationType = 'general', $relatedId = null) {
+    try {
+        $db = getDB();
+        $stmt = $db->prepare("INSERT INTO notifications 
+                            (user_id, title, message, type, notification_type, related_id) 
+                            VALUES (?, ?, ?, ?, ?, ?)");
+        return $stmt->execute([$userId, $title, $message, $type, $notificationType, $relatedId]);
+    } catch (Exception $e) {
+        // Log error but don't fail - notifications are secondary
+        error_log("Notification error: " . $e->getMessage());
+        return false;
+    }
 }

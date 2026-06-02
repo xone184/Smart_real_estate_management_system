@@ -355,6 +355,29 @@ export async function apiSubmitKYC(formData: FormData): Promise<{ message: strin
   return data;
 }
 
+export async function apiGetKYCAdminList(): Promise<any[]> {
+  return request('/users/kyc.php?admin_list=1');
+}
+
+export async function apiGetKYCLogs(userId?: number): Promise<any[]> {
+  const url = userId ? `/users/kyc.php?action=logs&user_id=${userId}` : '/users/kyc.php?action=logs';
+  return request(url);
+}
+
+export async function apiApproveKYC(userId: number, notes?: string): Promise<{ message: string }> {
+  return request(`/users/kyc.php?action=approve&user_id=${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ notes }),
+  });
+}
+
+export async function apiRejectKYC(userId: number, notes: string): Promise<{ message: string }> {
+  return request(`/users/kyc.php?action=reject&user_id=${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ notes }),
+  });
+}
+
 // =============================================
 // Appointments API
 // =============================================
@@ -437,6 +460,44 @@ export async function apiGetMarketStats(params?: { from?: string; to?: string })
   if (params?.from) qs.set('from', params.from);
   if (params?.to) qs.set('to', params.to);
   return request(`/properties/properties.php?${qs.toString()}`);
+}
+
+// =============================================
+// Market Trends API (dữ liệu thời gian thực từ internet)
+// =============================================
+export interface MarketTrendArticle {
+  id: string;
+  title: string;
+  link: string;
+  snippet: string;
+  source: string;
+  source_key: string;
+  timestamp: number;
+  date: string;
+  date_label: string;
+}
+
+export interface MarketTrendsData {
+  status: string;
+  fetched_at: string;
+  total_articles: number;
+  sources: { name: string; key: string; color: string; count: number; status: string }[];
+  summary: {
+    total_articles: number;
+    total_sources: number;
+    sentiment: 'bullish' | 'bearish' | 'neutral';
+    price_indicators: { up: number; down: number; stable: number };
+  };
+  daily_trend: { date: string; label: string; count: number }[];
+  by_source: { name: string; count: number; color: string }[];
+  hot_areas: { name: string; count: number }[];
+  type_distribution: { name: string; count: number; color: string }[];
+  hot_topics: { name: string; count: number; color: string }[];
+  articles: MarketTrendArticle[];
+}
+
+export async function apiGetMarketTrends(): Promise<MarketTrendsData> {
+  return request('/news/market_trends.php');
 }
 
 // =============================================

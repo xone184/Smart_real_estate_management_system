@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from './ui/Card';
 import { Button } from './ui/Button';
 import {
@@ -12,10 +12,12 @@ import {
   Image as ImageIcon,
   User,
   RefreshCw,
-  X
+  X,
+  LogIn,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { apiSubmitKYC } from '../../services/api';
+import { apiSubmitKYC, apiGetKYCStatus } from '../../services/api';
 
 interface KYCVerificationProps {
   onComplete?: () => void;
@@ -31,6 +33,29 @@ export function KYCVerification({ onComplete }: KYCVerificationProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [kycStatus, setKycStatus] = useState<{ kyc_verified: boolean; document: any } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await apiGetKYCStatus();
+        setKycStatus(status);
+        // If already submitted/pending/approved, show step 3
+        if (status.document?.status === 'pending' || status.kyc_verified) {
+          setStep(3);
+        }
+      } catch (err: any) {
+        if (err.message?.includes('401') || err.message?.includes('đăng nhập')) {
+          setAuthError(true);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkStatus();
+  }, []);
 
   const [idFront, setIdFront] = useState<UploadState>({ file: null, preview: null });
   const [idBack, setIdBack] = useState<UploadState>({ file: null, preview: null });
@@ -64,7 +89,7 @@ export function KYCVerification({ onComplete }: KYCVerificationProps) {
     reader.readAsDataURL(file);
   };
 
-  const clearFile = (setter: React.Dispatch<React.SetStateAction<UploadState>>, inputRef: React.RefObject<HTMLInputElement>) => {
+  const clearFile = (setter: React.Dispatch<React.SetStateAction<UploadState>>, inputRef: React.RefObject<HTMLInputElement | null>) => {
     setter({ file: null, preview: null });
     if (inputRef.current) inputRef.current.value = '';
   };
@@ -91,7 +116,12 @@ export function KYCVerification({ onComplete }: KYCVerificationProps) {
       setSubmitResult({ success: true, message: result.message });
       setStep(3);
     } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra khi gửi hồ sơ');
+      if (err.message?.includes('401') || err.message?.includes('đăng nhập')) {
+        setAuthError(true);
+        setError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        setError(err.message || 'Có lỗi xảy ra khi gửi hồ sơ');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -102,6 +132,64 @@ export function KYCVerification({ onComplete }: KYCVerificationProps) {
     { number: 2, label: 'Chân dung' },
     { number: 3, label: 'Hoàn tất' },
   ];
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4 text-center">
+        <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mx-auto mb-4" />
+        <p className="text-gray-500">Đang kiểm tra trạng thái xác minh...</p>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4">
+        <Card className="overflow-hidden border-none shadow-xl">
+          <CardContent className="p-8 text-center">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <LogIn className="w-8 h-8" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Chưa đăng nhập</h2>
+            <p className="text-gray-500 mb-6">
+              Bạn cần đăng nhập để thực hiện xác minh danh tính KYC.
+            </p>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
+              onClick={onComplete}
+            >
+              Quay lại đăng nhập
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Already verified
+  if (kycStatus?.kyc_verified) {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4">
+        <Card className="overflow-hidden border-none shadow-xl">
+          <CardContent className="p-8 text-center">
+            <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-12 h-12" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Đã xác minh danh tính</h2>
+            <p className="text-gray-500 mb-6">
+              Tài khoản của bạn đã được xác minh KYC thành công.
+            </p>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
+              onClick={onComplete}
+            >
+              Quay lại trang chủ
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-12 px-4">
@@ -363,27 +451,116 @@ export function KYCVerification({ onComplete }: KYCVerificationProps) {
                 animate={{ opacity: 1, scale: 1 }}
                 className="text-center py-10"
               >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', delay: 0.1 }}
-                  className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
-                >
-                  <CheckCircle2 className="w-12 h-12" />
-                </motion.div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Hồ sơ đã được gửi!</h2>
-                <p className="text-gray-500 mb-2 max-w-sm mx-auto">
-                  Hệ thống AI đang kiểm tra thông tin của bạn. Kết quả sẽ có trong vòng 5-10 phút.
-                </p>
-                <p className="text-sm text-blue-600 font-medium mb-8">
-                  Bạn sẽ nhận được thông báo khi quá trình xác minh hoàn tất.
-                </p>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
-                  onClick={onComplete}
-                >
-                  Quay lại trang chủ
-                </Button>
+                {kycStatus?.kyc_verified || kycStatus?.document?.status === 'approved' ? (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', delay: 0.1 }}
+                      className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
+                    >
+                      <ShieldCheck className="w-12 h-12" />
+                    </motion.div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Tài khoản đã xác thực</h2>
+                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">
+                      Tài khoản của bạn đã được xác thực danh tính (KYC) thành công.
+                    </p>
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
+                      onClick={onComplete}
+                    >
+                      Quay lại trang chủ
+                    </Button>
+                  </>
+                ) : kycStatus?.document?.status === 'rejected' ? (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', delay: 0.1 }}
+                      className="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6"
+                    >
+                      <AlertCircle className="w-12 h-12" />
+                    </motion.div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Yêu cầu bị từ chối</h2>
+                    <p className="text-gray-500 mb-4 max-w-sm mx-auto">
+                      Yêu cầu xác thực tài khoản của bạn đã bị từ chối.
+                    </p>
+                    {kycStatus.document?.notes && (
+                      <div className="bg-red-50 text-red-800 p-4 rounded-xl max-w-md mx-auto mb-6 text-sm text-left border border-red-100">
+                        <span className="font-bold">Lý do từ chối:</span> {kycStatus.document.notes}
+                      </div>
+                    )}
+                    <div className="flex justify-center gap-3">
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-6 rounded-2xl font-bold"
+                        onClick={() => {
+                          setStep(1);
+                          setIdFront({ file: null, preview: null });
+                          setIdBack({ file: null, preview: null });
+                          setSelfie({ file: null, preview: null });
+                        }}
+                      >
+                        Gửi lại hồ sơ mới
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="h-12 px-6 rounded-2xl font-bold"
+                        onClick={onComplete}
+                      >
+                        Trang chủ
+                      </Button>
+                    </div>
+                  </>
+                ) : kycStatus?.document?.status === 'pending' ? (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', delay: 0.1 }}
+                      className="w-24 h-24 bg-yellow-100 text-yellow-600 rounded-full flex items-center justify-center mx-auto mb-6"
+                    >
+                      <Clock className="w-12 h-12" />
+                    </motion.div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Hồ sơ đang chờ xác minh</h2>
+                    <p className="text-gray-500 mb-2 max-w-sm mx-auto">
+                      Hồ sơ KYC của bạn đã được gửi và đang được xem xét. Kết quả sẽ có trong vòng 5-10 phút.
+                    </p>
+                    <p className="text-sm text-blue-600 font-medium mb-8">
+                      Bạn sẽ nhận được thông báo khi quá trình xác minh hoàn tất.
+                    </p>
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
+                      onClick={onComplete}
+                    >
+                      Quay lại trang chủ
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', delay: 0.1 }}
+                      className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6"
+                    >
+                      <CheckCircle2 className="w-12 h-12" />
+                    </motion.div>
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Hồ sơ đã được gửi!</h2>
+                    <p className="text-gray-500 mb-2 max-w-sm mx-auto">
+                      Hệ thống đang kiểm tra thông tin của bạn. Kết quả sẽ có trong vòng 5-10 phút.
+                    </p>
+                    <p className="text-sm text-blue-600 font-medium mb-8">
+                      Bạn sẽ nhận được thông báo khi quá trình xác minh hoàn tất.
+                    </p>
+                    <Button
+                      className="bg-blue-600 hover:bg-blue-700 text-white h-12 px-10 rounded-2xl font-bold"
+                      onClick={onComplete}
+                    >
+                      Quay lại trang chủ
+                    </Button>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

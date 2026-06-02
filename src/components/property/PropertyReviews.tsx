@@ -16,6 +16,7 @@ export function PropertyReviews({ propertyId, user }: PropertyReviewsProps) {
   const [newComment, setNewComment] = useState('');
   const [newRating, setNewRating] = useState(5);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>('');
 
   useEffect(() => {
     fetchReviews();
@@ -36,6 +37,7 @@ export function PropertyReviews({ propertyId, user }: PropertyReviewsProps) {
     e.preventDefault();
     if (!user || !newComment.trim()) return;
 
+    setSubmitError('');
     setSubmitting(true);
     try {
       await apiCreateReview({
@@ -45,9 +47,12 @@ export function PropertyReviews({ propertyId, user }: PropertyReviewsProps) {
       });
       setNewComment('');
       setNewRating(5);
+      setSubmitError('');
       // Refresh reviews
       await fetchReviews();
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Lỗi không xác định khi gửi đánh giá';
+      setSubmitError(errorMsg);
       console.error('Error creating review:', error);
     } finally {
       setSubmitting(false);
@@ -123,16 +128,30 @@ export function PropertyReviews({ propertyId, user }: PropertyReviewsProps) {
             <div className="relative">
               <textarea
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Chia sẻ trải nghiệm của bạn về bất động sản này..."
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  setSubmitError(''); // Clear error when user starts typing
+                }}
+                placeholder="Chia sẻ trải nghiệm của bạn về bất động sản này (tối thiểu 5 ký tự)..."
                 className="w-full p-4 bg-gray-50 rounded-2xl border-none focus:ring-2 focus:ring-blue-500 min-h-[100px] text-sm"
               />
+              <div className="flex justify-between items-center mt-2">
+                <div className="flex-1">
+                  {submitError && (
+                    <p className="text-xs text-red-600 font-medium">{submitError}</p>
+                  )}
+                </div>
+                <p className="text-xs text-gray-400 ml-2">
+                  {newComment.length}/500
+                </p>
+              </div>
               <Button 
                 type="submit" 
-                disabled={submitting || !newComment.trim()}
-                className="absolute bottom-4 right-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2"
+                disabled={submitting || !newComment.trim() || newComment.length < 5}
+                className="mt-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-2 w-full disabled:opacity-50"
               >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
+                {submitting ? 'Đang gửi...' : 'Gửi đánh giá'}
               </Button>
             </div>
           </form>
@@ -154,7 +173,7 @@ export function PropertyReviews({ propertyId, user }: PropertyReviewsProps) {
                 key={review.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ duration: 0.2 }}
                 className="space-y-3"
               >
                 <div className="flex justify-between items-start">

@@ -581,7 +581,7 @@ export default function App() {
             )}
 
             {/* Hero Section */}
-            <section className="relative h-[480px] flex items-center justify-center overflow-hidden rounded-[2.5rem] mx-4 sm:mx-0 shadow-xl">
+            <section className="relative h-[480px] flex items-center justify-center overflow-hidden mx-4 sm:mx-0 shadow-xl">
               <div className="absolute inset-0 z-0">
                 <img 
                   src="https://picsum.photos/seed/realestate-hero/1920/1080" 
@@ -650,7 +650,7 @@ export default function App() {
                       key={prop.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.1 }}
+                      transition={{ duration: 0.3 }}
                     >
                       <PropertyCard 
                         property={prop} 
@@ -748,7 +748,7 @@ export default function App() {
               <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight mb-2">Phân tích thị trường</h1>
               <p className="text-gray-500">Dữ liệu thời gian thực giúp bạn đưa ra quyết định đầu tư đúng đắn</p>
             </div>
-            <MarketDashboard />
+            <MarketDashboard userRole={user?.role} />
           </div>
         );
       case 'post':

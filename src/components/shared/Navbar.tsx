@@ -92,14 +92,11 @@ export function Navbar({ onNavigate, currentPage, userRole, user, onShowAuth, on
 
   const navItems = [
     { id: 'home', label: 'Khám phá', icon: <Search className="w-4 h-4" /> },
+    { id: 'market', label: 'Thị trường', icon: <BarChart2 className="w-4 h-4" /> },
     { id: 'pricing', label: 'Bảng giá', icon: <Tag className="w-4 h-4" /> },
     { id: 'post', label: 'Đăng tin', icon: <PlusCircle className="w-4 h-4" /> },
     { id: 'about', label: 'Về chúng tôi', icon: <Info className="w-4 h-4" /> },
   ];
-
-  if (userRole === 'admin' || userRole === 'agent') {
-    navItems.splice(1, 0, { id: 'market', label: 'Thị trường', icon: <BarChart2 className="w-4 h-4" /> });
-  }
 
   if (userRole === 'admin') {
     navItems.push({ id: 'admin', label: 'Quản trị', icon: <Shield className="w-4 h-4" /> });
