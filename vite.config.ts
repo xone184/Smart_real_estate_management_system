@@ -34,6 +34,9 @@ export default defineConfig(({mode}) => {
       hmr: process.env.DISABLE_HMR !== 'true',
       // Allow Codespaces *.app.github.dev domains and all local hosts
       allowedHosts: true,
+      watch: {
+        ignored: ['**/ai_service/data/**']
+      },
       proxy: {
         '/smart-real-estate-management-system/api': {
           target: phpTarget,

@@ -113,6 +113,9 @@ export default function App() {
       const res = await apiGetMe();
       if (res.user) {
         setUser(res.user as UserProfile);
+        if ((window as any).NexusTracker) {
+          (window as any).NexusTracker.identify(res.user.email, res.user.display_name);
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -137,6 +140,9 @@ export default function App() {
     try {
       const res = await apiLogin(authEmail, authPassword);
       setUser(res.user as UserProfile);
+      if ((window as any).NexusTracker) {
+        (window as any).NexusTracker.identify(res.user.email, res.user.display_name);
+      }
       setShowAuthModal(false);
       setAuthEmail('');
       setAuthPassword('');
@@ -189,6 +195,9 @@ export default function App() {
     try {
       const res = await apiVerifyOTP(authEmail, otpCode, authPassword, authName, authRole);
       setUser(res.user as UserProfile);
+      if ((window as any).NexusTracker) {
+        (window as any).NexusTracker.identify(res.user.email, res.user.display_name);
+      }
       setShowAuthModal(false);
       setAuthEmail('');
       setAuthPassword('');

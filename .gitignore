@@ -1,6 +1,9 @@
 # === Dependencies ===
 node_modules/
 vendor/
+venv/
+.venv/
+ai_service/venv/
 
 # === Build Output ===
 dist/
@@ -29,3 +32,17 @@ Thumbs.db
 
 # === Package locks (optional - chỉ cần lock 1 loại) ===
 # package-lock.json
+
+# === Temporary & Test Files ===
+cookie.txt
+test.php
+test_php.txt
+test_resp.json
+qc
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

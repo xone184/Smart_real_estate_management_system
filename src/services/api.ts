@@ -684,3 +684,61 @@ export async function apiUpdateContactStatus(id: number, status: string): Promis
   });
 }
 
+// =============================================
+// AI OSINT Search API
+// =============================================
+export interface ApiOSINTProfile {
+  name: string;
+  email?: string;
+  phone?: string;
+  access_trend?: string;
+  predicted_job: string;
+  reputation_score: number;
+  social_links: string[];
+  summary: string;
+}
+
+export interface ApiRealOSINTUser {
+  id: string;
+  name: string;
+  title: string;
+  url: string;
+  snippet: string;
+  source: string;
+  scraped_at: string;
+  email?: string;
+  phone?: string;
+  access_trend?: string;
+}
+
+export interface ApiRealOSINTResponse {
+  data: ApiRealOSINTUser[];
+  total: number;
+  page: number;
+  limit: number;
+  is_full: boolean;
+}
+
+export const apiOSINTSearch = async (query: string): Promise<ApiOSINTProfile> => {
+  return request('/ai/osint.php', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+};
+
+export const apiGetRealOSINTUsers = async (page: number = 1, limit: number = 20): Promise<ApiRealOSINTResponse> => {
+  return request(`/ai/real_users.php?page=${page}&limit=${limit}`);
+};
+
+export const apiScrapeRealUsers = async (): Promise<{ status: string, added?: number, total: number, message: string }> => {
+  return request('/ai/real_users.php', {
+    method: 'POST',
+  });
+};
+
+export const apiDeleteRealOSINTUsers = async (ids: string[]): Promise<{ status: string, deleted: number, total: number }> => {
+  return request('/ai/real_users.php', {
+    method: 'DELETE',
+    body: JSON.stringify({ ids }),
+  });
+};

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../shared/ui/Card';
 import { Button } from '../shared/ui/Button';
-import { User, Settings, List, Heart, Bell, LogOut, ShieldCheck, Clock, MapPin, ArrowRight, Trash2, Camera, Lock, Save, CheckCircle2, CalendarClock, Calendar as CalendarIcon, Phone, Star, ChevronLeft, ChevronRight } from 'lucide-react';
+import { User, Settings, List, Heart, Bell, LogOut, ShieldCheck, Clock, MapPin, ArrowRight, Trash2, Camera, Lock, Save, CheckCircle2, CalendarClock, Calendar as CalendarIcon, Phone, Star, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { cn } from '@/src/lib/utils';
 import { Avatar } from '../shared/Avatar';
 import { apiGetProperties, apiGetSavedProperties, apiUnsaveProperty, apiGetNotifications, apiMarkNotificationRead, apiMarkAllNotificationsRead, apiUpdateUser, ApiNotification, apiGetAppointments, ApiAppointment, apiUpdateAppointmentStatus, apiUploadImages, apiDeleteProperty, apiUpdateProperty, apiGetReviews, ApiReview } from '../../services/api';
 import { Property, UserProfile } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { BarChart, Bar, PieChart, Pie, Cell, Tooltip, ResponsiveContainer, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { CustomerBackgroundCheck } from './CustomerBackgroundCheck';
 
-type DashboardTab = 'profile' | 'listings' | 'saved' | 'appointments' | 'notifications' | 'settings';
+type DashboardTab = 'profile' | 'listings' | 'saved' | 'appointments' | 'notifications' | 'osint' | 'settings';
 
 interface AgentDashboardProps {
   initialTab?: DashboardTab;
@@ -716,6 +717,9 @@ export function AgentDashboard({ initialTab, onNavigate, user, onLogout }: Agent
           </Card>
         );
 
+      case 'osint':
+        return <CustomerBackgroundCheck />;
+
       case 'settings':
         return (
           <div className="space-y-6">
@@ -906,6 +910,7 @@ export function AgentDashboard({ initialTab, onNavigate, user, onLogout }: Agent
               <SidebarItem icon={<Heart className="w-4 h-4" />} label="Quan tâm của tôi" badge={savedProperties.length} active={activeTab === 'saved'} onClick={() => setActiveTab('saved')} />
               <SidebarItem icon={<CalendarClock className="w-4 h-4" />} label="Danh sách chốt khách" badge={appointments.length} active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')} />
               <SidebarItem icon={<Bell className="w-4 h-4" />} label="Thông báo" badge={unreadCount} active={activeTab === 'notifications'} onClick={() => setActiveTab('notifications')} />
+              <SidebarItem icon={<Search className="w-4 h-4" />} label="Hồ sơ khách hàng (OSINT)" active={activeTab === 'osint'} onClick={() => setActiveTab('osint')} />
               <SidebarItem icon={<Settings className="w-4 h-4" />} label="Cài đặt tài khoản" active={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
               <div className="my-2 border-t border-gray-100" />
               <SidebarItem icon={<LogOut className="w-4 h-4" />} label="Đăng xuất" className="text-red-600 hover:bg-red-50" onClick={onLogout} />

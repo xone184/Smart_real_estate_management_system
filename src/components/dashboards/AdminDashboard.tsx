@@ -52,6 +52,7 @@ import {
 import { Property, UserProfile } from '../../types';
 import { MarketDashboard } from './MarketDashboard';
 import { PropertyMortgage } from '../property/PropertyMortgage';
+import { CustomerBackgroundCheck } from './CustomerBackgroundCheck';
 
 // ─── Plan config ────────────────────────────────────────────────────────────
 const planMeta: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
@@ -85,7 +86,7 @@ const statusMeta: Record<string, { label: string; color: string; bg: string }> =
 // ─── Component ───────────────────────────────────────────────────────────────
 interface AdminDashboardProps {
   onNavigate?: (page: string) => void;
-  initialTab?: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc';
+  initialTab?: 'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc' | 'osint';
 }
 
 export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) {
@@ -95,7 +96,7 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
   const [loading, setLoading] = useState(true);
   const [subLoading, setSubLoading] = useState(false);
   const [processingId, setProcessingId] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc'>(initialTab || 'overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'subscriptions' | 'contacts' | 'kyc' | 'osint'>(initialTab || 'overview');
   const [subFilter, setSubFilter] = useState<'all' | 'pending' | 'active' | 'rejected'>('all');
   const [contactMessages, setContactMessages] = useState<ApiContactMessage[]>([]);
   const [contactLoading, setContactLoading] = useState(false);
@@ -799,6 +800,7 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
             icon: <Shield className="w-4 h-4" />,
             badge: kycDocs.filter(d => d.status === 'pending').length > 0 ? kycDocs.filter(d => d.status === 'pending').length : undefined,
           },
+          { id: 'osint',          label: 'Hồ sơ OSINT',  icon: <Search className="w-4 h-4" /> },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -1534,6 +1536,13 @@ export function AdminDashboard({ onNavigate, initialTab }: AdminDashboardProps) 
               </Button>
             </div>
           </motion.div>
+        </div>
+      )}
+
+      {/* ── OSINT TAB ───────────────────────────────────────────────────────── */}
+      {activeTab === 'osint' && (
+        <div className="space-y-6">
+          <CustomerBackgroundCheck />
         </div>
       )}
 

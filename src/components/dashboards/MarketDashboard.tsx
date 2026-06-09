@@ -18,6 +18,7 @@ import { TrendingUp, TrendingDown, Users, Home, DollarSign, Star, RefreshCw, Bar
 import { apiGetMarketStats, apiGetMarketTrends, MarketStats, MarketTrendsData } from '../../services/api';
 import { Button } from '../shared/ui/Button';
 import { motion } from 'motion/react';
+import { useActivityTracker } from '../../hooks/useActivityTracker';
 
 const COLORS_MAP: Record<string, string> = {
   apartment: '#3b82f6',
@@ -54,6 +55,12 @@ export function MarketDashboard({ userRole }: MarketDashboardProps) {
   const [error, setError] = useState('');
   const [lastRefresh, setLastRefresh] = useState(new Date());
   
+  // AI Recommendations
+  const [recommendedNews, setRecommendedNews] = useState<any[]>([]);
+  const [socialTrends, setSocialTrends] = useState<any>(null);
+  
+  const { trackActivity } = useActivityTracker();
+  
   // Date filters for system stats
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -66,7 +73,21 @@ export function MarketDashboard({ userRole }: MarketDashboardProps) {
 
   useEffect(() => {
     fetchTrends();
+    fetchRecommendations();
   }, []);
+
+  const fetchRecommendations = async () => {
+    try {
+      const res = await fetch('/smart-real-estate-management-system/api/ai/recommend.php');
+      const json = await res.json();
+      if (json.status === 'success') {
+        setRecommendedNews(json.data.recommended_news || []);
+        setSocialTrends(json.data.social_trends || null);
+      }
+    } catch (e) {
+      console.error('Error fetching AI recommendations', e);
+    }
+  };
 
   const fetchStats = async () => {
     setLoading(true);
@@ -98,6 +119,7 @@ export function MarketDashboard({ userRole }: MarketDashboardProps) {
   const handleRefreshAll = () => {
     fetchStats();
     fetchTrends();
+    fetchRecommendations();
   };
 
   const s = stats || FALLBACK_STATS;
@@ -610,6 +632,7 @@ export function MarketDashboard({ userRole }: MarketDashboardProps) {
                     href={art.link}
                     target="_blank"
                     rel="noopener noreferrer"
+                    onClick={() => trackActivity('click_news', art.id, { title: art.title, source: art.source })}
                     className="text-gray-900 font-bold hover:text-blue-600 text-sm sm:text-base transition-colors leading-snug block mb-1.5"
                   >
                     {art.title}
@@ -622,6 +645,133 @@ export function MarketDashboard({ userRole }: MarketDashboardProps) {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* AI Recommendations Section */}
+      {recommendedNews.length > 0 && (
+        <Card className="border-blue-100 bg-blue-50/30">
+          <CardHeader className="border-b border-blue-100/50 pb-4">
+            <CardTitle className="text-lg flex items-center gap-2 text-blue-900">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              Tin tức đề xuất cho bạn (AI)
+            </CardTitle>
+            <p className="text-xs text-blue-600/70 mt-1">
+              Dựa trên hành vi truy cập và sở thích của bạn
+            </p>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4">
+              {recommendedNews.map((news, idx) => (
+                <div key={idx} className="bg-white p-4 rounded-2xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                  <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-lg mb-2">
+                    Đề xuất
+                  </span>
+                  <a 
+                    href={news.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={() => trackActivity('click_news', news.id, { title: news.title, source: news.source })}
+                    className="block font-bold text-gray-900 hover:text-blue-600 text-sm mb-2 line-clamp-3"
+                  >
+                    {news.title}
+                  </a>
+                  <p className="text-xs text-gray-500 line-clamp-2">{news.snippet}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Social Trends (Mock) */}
+      {!isAdmin && socialTrends && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card className="border-indigo-100">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-indigo-900">
+                <TrendingUp className="w-4 h-4 text-indigo-600" />
+                Xu hướng Facebook
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {socialTrends.facebook?.map((trend: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-xl text-sm font-medium border border-blue-100">
+                    #{trend}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-gray-200 bg-gray-900 text-white">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-white">
+                <TrendingUp className="w-4 h-4 text-pink-500" />
+                Xu hướng TikTok
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {socialTrends.tiktok?.map((trend: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-gray-800 text-gray-200 rounded-xl text-sm font-medium border border-gray-700">
+                    #{trend}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-orange-100">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-orange-900">
+                <TrendingUp className="w-4 h-4 text-orange-600" />
+                Xu hướng Reddit
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {socialTrends.reddit?.map((trend: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-orange-50 text-orange-700 rounded-xl text-sm font-medium border border-orange-100">
+                    r/{trend.replace(/ /g, '_')}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-red-100">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-red-900">
+                <TrendingUp className="w-4 h-4 text-red-600" />
+                Tìm kiếm Google
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {socialTrends.google?.map((trend: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-red-50 text-red-700 rounded-xl text-sm font-medium border border-red-100">
+                    🔍 {trend}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-green-100">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-green-900">
+                <TrendingUp className="w-4 h-4 text-green-600" />
+                Báo chí (Google News)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {socialTrends.google_news?.map((trend: string, idx: number) => (
+                  <span key={idx} className="px-3 py-1.5 bg-green-50 text-green-700 rounded-xl text-sm font-medium border border-green-100">
+                    📰 {trend}
+                  </span>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
